@@ -1,0 +1,1229 @@
+"use client"
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Brush, Square, Circle, ChevronUp, ChevronDown, Sun, Moon, File, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { v4 as uuidv4 } from 'uuid';
+import { wallet } from '@/utils/near-wallet';
+import Modal from '@/components/Modal';
+
+interface Shape {
+    id: string;
+    tool: string;
+    points?: { x: number; y: number }[];
+    color: string;
+    strokeWidth: number;
+    startX?: number;
+    startY?: number;
+    width?: number;
+    height?: number;
+    isVisible: boolean;
+    // New properties
+    brushSize?: number;
+    brushOpacity?: number;
+    brushHardness?: number;
+    brushFlow?: number;
+    rectangleBorderRadius?: number;
+    rectangleFill?: string;
+    rectangleBorderColor?: string;
+    rectangleBorderWidth?: number;
+    rectangleOpacity?: number;
+    rectangleRotation?: number;
+    circleOpacity?: number;
+    circleFill?: string;
+    circleBorderColor?: string;
+    circleBorderWidth?: number;
+    circleRotation?: number;
+    isSelected?: boolean;
+}
+
+const InfiniteCanvas2: React.FC = () => {
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+    const [selectedTool, setSelectedTool] = useState<string>('cursor');
+    const [isPropertiesOpen, setIsPropertiesOpen] = useState<boolean>(true);
+    const [isLayersOpen, setIsLayersOpen] = useState<boolean>(true);
+    const [fillColor, setFillColor] = useState<string>('#000000');
+    const [strokeWidth, setStrokeWidth] = useState<number>(2);
+    const [shapes, setShapes] = useState<Shape[]>([]);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+    const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+    const [brushSize, setBrushSize] = useState<number>(5);
+    const [brushOpacity, setBrushOpacity] = useState<number>(100);
+    const [brushHardness, setBrushHardness] = useState<number>(50);
+    const [brushFlow, setBrushFlow] = useState<number>(100);
+    const [rectangleBorderRadius, setRectangleBorderRadius] = useState<number>(0);
+    const [rectangleFill, setRectangleFill] = useState<string>('#ffffff');
+    const [rectangleBorderColor, setRectangleBorderColor] = useState<string>('#000000');
+    const [rectangleBorderWidth, setRectangleBorderWidth] = useState<number>(1);
+    const [rectangleOpacity, setRectangleOpacity] = useState<number>(100);
+    const [rectangleRotation, setRectangleRotation] = useState<number>(0);
+    const [circleOpacity, setCircleOpacity] = useState<number>(100);
+    const [circleFill, setCircleFill] = useState<string>('#ffffff');
+    const [circleBorderColor, setCircleBorderColor] = useState<string>('#000000');
+    const [circleBorderWidth, setCircleBorderWidth] = useState<number>(1);
+    const [circleRotation, setCircleRotation] = useState<number>(0);
+    const [selectedShape, setSelectedShape] = useState<Shape | null>(null);
+    const [isResizing, setIsResizing] = useState(false);
+    const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+    const [resizeStartX, setResizeStartX] = useState(0);
+    const [resizeStartY, setResizeStartY] = useState(0);
+    const [isMoving, setIsMoving] = useState(false);
+    const [moveStartX, setMoveStartX] = useState(0);
+    const [moveStartY, setMoveStartY] = useState(0);
+    const [isSignedIn, setIsSignedIn] = useState(false);
+    const [accountId, setAccountId] = useState('');
+    const [isSelecting, setIsSelecting] = useState(false);
+    const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
+    const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
+    const selectionBoxRef = useRef<HTMLDivElement>(null);
+    const [selectedShapes, setSelectedShapes] = useState<Shape[]>([]);
+    const [eraserSize, setEraserSize] = useState<number>(20);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState<React.ReactNode>('');
+    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [isPanning, setIsPanning] = useState(false);
+    const [isMinting, setIsMinting] = useState(false);
+    const [nftTitle, setNftTitle] = useState('');
+    const [nftDescription, setNftDescription] = useState('');
+    const [zoomLevel, setZoomLevel] = useState(100);
+
+    const tools = [
+        { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas' },
+        { id: 'brush', icon: Brush, tooltip: 'Draw freely on the canvas' },
+        { id: 'rectangle', icon: Square, tooltip: 'Input rectangle shape on canvas' },
+        { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas' },
+        { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas' },
+    ];
+
+    const handleToolSelect = useCallback((toolId: string) => {
+        console.log("see")
+        setSelectedTool(toolId);
+        console.log("Selected tool:", toolId);
+    }, []);
+
+    useEffect(() => {
+        const updateCanvasSize = () => {
+            setCanvasSize({ width: window.innerWidth, height: window.innerHeight });
+        };
+
+        updateCanvasSize();
+        window.addEventListener('resize', updateCanvasSize);
+
+        return () => window.removeEventListener('resize', updateCanvasSize);
+    }, []);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = fillColor;
+                ctx.lineWidth = strokeWidth;
+            }
+        }
+    }, [fillColor, strokeWidth]);
+
+    useEffect(() => {
+        wallet.startUp().then((signedIn) => {
+            setIsSignedIn(signedIn);
+            if (signedIn) {
+                setAccountId(wallet.getAccountId());
+                showModal(`Welcome back, ${wallet.getAccountId()}!`);
+            }
+        });
+    }, []);
+
+    useEffect(() => {
+        const savedData = localStorage.getItem('canvasData');
+        if (savedData) {
+            setShapes(JSON.parse(savedData));
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('canvasData', JSON.stringify(shapes));
+    }, [shapes]);
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (e.button === 1 || (e.button === 0 && e.altKey)) { // Middle mouse button or Alt + left click
+            setIsPanning(true);
+            setMoveStartX(e.clientX);
+            setMoveStartY(e.clientY);
+            return;
+        }
+        if (e.target !== e.currentTarget) return;
+
+        const canvas = canvasRef.current;
+        if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (selectedTool === 'pointer') {
+                const clickedShape = shapes.find(shape => {
+                    if (shape.tool === 'brush' && shape.points) {
+                        return shape.points.some(point => {
+                            return x >= point.x && x <= point.x + shape.strokeWidth && y >= point.y && y <= point.y + shape.strokeWidth;
+                        });
+                    } else if (shape.tool === 'rectangle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
+                        return x >= shape.startX && x <= shape.startX + shape.width && y >= shape.startY && y <= shape.startY + shape.height;
+                    } else if (shape.tool === 'circle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
+                        return Math.sqrt((x - (shape.startX + shape.width / 2)) ** 2 + (y - (shape.startY + shape.height / 2)) ** 2) <= shape.width / 2;
+                    }
+                    return false;
+                });
+
+                if (clickedShape) {
+                    if (!e.shiftKey) {
+                        // If shift is not pressed, clear previous selection and select only this shape
+                        setSelectedShapes([]);
+                        handleShapeSelect(clickedShape.id);
+                    } else {
+                        // If shift is pressed, toggle this shape in the selection
+                        handleShapeSelect(clickedShape.id);
+                    }
+
+                    setIsMoving(true);
+                    setMoveStartX(x);
+                    setMoveStartY(y);
+                } else {
+                    // Clicked outside any shape, deselect all
+                    setSelectedShapes([]);
+                    setSelectedShape(null);
+                    
+                    // Start multi-select
+                    setIsSelecting(true);
+                    setSelectionStart({ x, y });
+                    setSelectionEnd({ x, y });
+                }
+            } else {
+                // Deselect all when switching to a drawing tool
+                setSelectedShapes([]);
+                setSelectedShape(null);
+                
+                setIsDrawing(true);
+
+                switch (selectedTool) {
+                    case 'brush':
+                        // Start drawing
+                        const newShape: Shape = {
+                            id: uuidv4(),
+                            tool: 'brush',
+                            points: [{ x, y }],
+                            color: fillColor,
+                            strokeWidth: brushSize,
+                            isVisible: true,
+                            isSelected: false
+                        };
+                        setShapes([...shapes, newShape]);
+                        break;
+                    case 'rectangle':
+                        // Start drawing rectangle
+                        const newRect: Shape = {
+                            id: uuidv4(),
+                            tool: 'rectangle',
+                            startX: x,
+                            startY: y,
+                            width: 0,
+                            height: 0,
+                            color: rectangleFill,
+                            strokeWidth: rectangleBorderWidth,
+                            isVisible: true,
+                            isSelected: false,
+                            rectangleBorderColor: rectangleBorderColor,
+                            rectangleBorderRadius: rectangleBorderRadius,
+                            rectangleOpacity: rectangleOpacity,
+                            rectangleRotation: rectangleRotation
+                        };
+                        setShapes([...shapes, newRect]);
+                        break;
+                    case 'circle':
+                        // Start drawing circle
+                        const newCircle: Shape = {
+                            id: uuidv4(),
+                            tool: 'circle',
+                            startX: x,
+                            startY: y,
+                            width: 0,
+                            height: 0,
+                            color: circleFill,
+                            strokeWidth: circleBorderWidth,
+                            isVisible: true,
+                            isSelected: false,
+                            circleBorderColor: circleBorderColor,
+                            circleOpacity: circleOpacity,
+                            circleRotation: circleRotation
+                        };
+                        setShapes([...shapes, newCircle]);
+                        break;
+                    case 'eraser':
+                        // Implement eraser logic
+                        break;
+                }
+            }
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isPanning) {
+            const dx = e.clientX - moveStartX;
+            const dy = e.clientY - moveStartY;
+            setPanOffset(prev => ({
+                x: prev.x + dx,
+                y: prev.y + dy
+            }));
+            setMoveStartX(e.clientX);
+            setMoveStartY(e.clientY);
+            return;
+        }
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (isSelecting) {
+            setSelectionEnd({ x, y });
+        } else if (isMoving && selectedShapes.length > 0) {
+            const dx = x - moveStartX;
+            const dy = y - moveStartY;
+
+            setShapes(prevShapes => prevShapes.map(shape => 
+                selectedShapes.find(s => s.id === shape.id)
+                    ? {
+                        ...shape,
+                        startX: (shape.startX || 0) + dx,
+                        startY: (shape.startY || 0) + dy,
+                        points: shape.points?.map(point => ({ x: point.x + dx, y: point.y + dy }))
+                    }
+                    : shape
+            ));
+
+            setMoveStartX(x);
+            setMoveStartY(y);
+        } else if (isDrawing) {
+            if (selectedTool === 'eraser') {
+                // Eraser logic
+                setShapes(prevShapes => prevShapes.map(shape => {
+                    if (shape.tool === 'brush' && shape.points) {
+                        // For brush strokes, remove points within eraser range
+                        const newPoints = shape.points.filter(point => {
+                            const distance = Math.sqrt((point.x - x) ** 2 + (point.y - y) ** 2);
+                            return distance > eraserSize / 2;
+                        });
+                        return newPoints.length > 0 ? { ...shape, points: newPoints } : null;
+                    } else if ((shape.tool === 'rectangle' || shape.tool === 'circle') && 
+                               shape.startX !== undefined && shape.startY !== undefined && 
+                               shape.width !== undefined && shape.height !== undefined) {
+                        // For rectangles and circles, check if eraser touches them
+                        const shapeLeft = shape.startX;
+                        const shapeRight = shape.startX + shape.width;
+                        const shapeTop = shape.startY;
+                        const shapeBottom = shape.startY + shape.height;
+
+                        if (x >= shapeLeft - eraserSize / 2 && x <= shapeRight + eraserSize / 2 &&
+                            y >= shapeTop - eraserSize / 2 && y <= shapeBottom + eraserSize / 2) {
+                            return null; // Erase the shape
+                        }
+                    }
+                    return shape;
+                }).filter(Boolean) as Shape[]); // Remove null values (erased shapes)
+            } else {
+                // Existing drawing logic for other tools
+                const updatedShapes = [...shapes];
+                const currentShape = updatedShapes[updatedShapes.length - 1];
+
+                switch (selectedTool) {
+                    case 'brush':
+                        if (currentShape.points) {
+                            currentShape.points.push({ x, y });
+                        }
+                        break;
+                    case 'rectangle':
+                    case 'circle':
+                        if (currentShape.startX !== undefined && currentShape.startY !== undefined) {
+                            currentShape.width = x - currentShape.startX;
+                            currentShape.height = y - currentShape.startY;
+                        }
+                        break;
+                }
+
+                setShapes(updatedShapes);
+            }
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsPanning(false);
+        if (isSelecting) {
+            const newSelectedShapes = shapes.filter(shape => isShapeInSelection(shape));
+            setSelectedShapes(prev => [...prev, ...newSelectedShapes]);
+            setIsSelecting(false);
+            setSelectionStart(null);
+            setSelectionEnd(null);
+        }
+        setIsDrawing(false);
+        setIsResizing(false);
+        setIsMoving(false);
+        setResizeHandle(null);
+    };
+
+    const handleShapeSelect = (id: string) => {
+        setShapes(prevShapes => prevShapes.map(shape => ({
+            ...shape,
+            isSelected: shape.id === id ? !shape.isSelected : shape.isSelected
+        })));
+        
+        setSelectedShapes(prev => {
+            const shape = shapes.find(s => s.id === id);
+            if (shape) {
+                const isAlreadySelected = prev.some(s => s.id === id);
+                if (isAlreadySelected) {
+                    // If the shape is already selected, remove it from the selection
+                    const updatedSelection = prev.filter(s => s.id !== id);
+                    setSelectedShape(updatedSelection.length > 0 ? updatedSelection[0] : null);
+                    return updatedSelection;
+                } else {
+                    // If the shape is not selected, add it to the selection
+                    setSelectedShape(shape);
+                    return [...prev, shape];
+                }
+            }
+            return prev;
+        });
+    };
+
+    const handleShapeVisibilityToggle = (id: string) => {
+        setShapes(shapes.map(shape =>
+            shape.id === id ? { ...shape, isVisible: !shape.isVisible } : shape
+        ));
+    };
+
+    const handleShapeDelete = (id: string) => {
+        setShapes(shapes.filter(shape => shape.id !== id));
+        if (selectedShapeId === id) {
+            setSelectedShapeId(null);
+        }
+    };
+
+    const handlePropertyChange = (property: 'color' | 'strokeWidth', value: string | number) => {
+        if (selectedShapeId) {
+            setShapes(shapes.map(shape =>
+                shape.id === selectedShapeId ? { ...shape, [property]: value } : shape
+            ));
+        }
+    };
+
+    const handleSelectedShapePropertyChange = (property: keyof Shape, value: Shape[keyof Shape]) => {
+        if (selectedShape) {
+            const updatedShapes = shapes.map(shape =>
+                shape.id === selectedShape.id ? { ...shape, [property]: value } : shape
+            );
+            setShapes(updatedShapes);
+            const updatedSelectedShape = updatedShapes.find(s => s.id === selectedShape.id);
+            setSelectedShape(updatedSelectedShape || null);
+            
+            // Force a re-render of the canvas
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    updatedShapes.forEach(shape => drawShape(ctx, shape));
+                }
+            }
+        }
+    };
+
+    const drawBackgroundDots = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+        const dotSpacing = 20; // Adjust this value to change the spacing between dots
+        const dotRadius = 1; // Adjust this value to change the size of the dots
+
+        ctx.fillStyle = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+
+        const startX = Math.floor(-panOffset.x / zoom / dotSpacing) * dotSpacing;
+        const startY = Math.floor(-panOffset.y / zoom / dotSpacing) * dotSpacing;
+        const endX = startX + width + dotSpacing;
+        const endY = startY + height + dotSpacing;
+
+        for (let x = startX; x < endX; x += dotSpacing) {
+            for (let y = startY; y < endY; y += dotSpacing) {
+                ctx.beginPath();
+                ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    };
+
+    const drawShape = (ctx: CanvasRenderingContext2D, shape: Shape, isExporting: boolean = false) => {
+        if (!shape.isVisible) return;
+
+        ctx.fillStyle = shape.color;
+        ctx.strokeStyle = shape.rectangleBorderColor || shape.circleBorderColor || shape.color;
+        ctx.lineWidth = shape.strokeWidth;
+
+        if (shape.tool === 'brush' && shape.points) {
+            ctx.beginPath();
+            ctx.moveTo(shape.points[0].x, shape.points[0].y);
+            shape.points.forEach(point => {
+                ctx.lineTo(point.x, point.y);
+            });
+            ctx.stroke();
+        } else if (shape.tool === 'rectangle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
+            ctx.beginPath();
+            ctx.globalAlpha = (shape.rectangleOpacity || 100) / 100;
+            if (shape.rectangleBorderRadius) {
+                ctx.roundRect(shape.startX, shape.startY, shape.width, shape.height, shape.rectangleBorderRadius);
+            } else {
+                ctx.rect(shape.startX, shape.startY, shape.width, shape.height);
+            }
+            ctx.fill();
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        } else if (shape.tool === 'circle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
+            ctx.beginPath();
+            ctx.globalAlpha = (shape.circleOpacity || 100) / 100;
+            ctx.ellipse(
+                shape.startX + shape.width / 2,
+                shape.startY + shape.height / 2,
+                Math.abs(shape.width / 2),
+                Math.abs(shape.height / 2),
+                0,
+                0,
+                2 * Math.PI
+            );
+            ctx.fill();
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        // Only draw selection highlight if not exporting
+        if (!isExporting && selectedShapes.find(s => s.id === shape.id)) {
+            ctx.strokeStyle = '#00FFFF';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            if (shape.tool === 'brush' && shape.points) {
+                ctx.beginPath();
+                ctx.moveTo(shape.points[0].x, shape.points[0].y);
+                shape.points.forEach(point => {
+                    ctx.lineTo(point.x, point.y);
+                });
+                ctx.stroke();
+            } else if (shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
+                ctx.strokeRect(shape.startX - 5, shape.startY - 5, shape.width + 10, shape.height + 10);
+            }
+            ctx.setLineDash([]);
+        }
+
+        // Remove the eraser cursor visualization
+        // The following code block has been removed:
+        // if (!isExporting && selectedTool === 'eraser') {
+        //     ctx.beginPath();
+        //     ctx.arc(shape.startX || 0, shape.startY || 0, eraserSize / 2, 0, 2 * Math.PI);
+        //     ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        //     ctx.stroke();
+        // }
+    };
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.save();
+                ctx.translate(panOffset.x, panOffset.y);
+                ctx.scale(zoom, zoom);
+
+                // Draw background dots
+                drawBackgroundDots(ctx, canvas.width / zoom, canvas.height / zoom);
+
+                shapes.forEach(shape => {
+                    drawShape(ctx, shape);
+                });
+
+                ctx.restore();
+            }
+        }
+    }, [shapes, selectedShapes, selectedShape, panOffset, zoom, isDarkMode]);
+
+    const renderPropertiesPanel = () => {
+        if (selectedShape) {
+            switch (selectedShape.tool) {
+                case 'brush':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Brush Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.color}
+                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Brush Size</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full"
+                                    min="1"
+                                    max="50"
+                                    value={selectedShape.strokeWidth}
+                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
+                                />
+                            </div>
+                        </>
+                    );
+                case 'rectangle':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Fill Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.color}
+                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.rectangleBorderColor || '#000000'}
+                                    onChange={(e) => handleSelectedShapePropertyChange('rectangleBorderColor', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Width</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full"
+                                    min="0"
+                                    max="20"
+                                    value={selectedShape.strokeWidth}
+                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Radius</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full"
+                                    min="0"
+                                    max="50"
+                                    value={selectedShape.rectangleBorderRadius || 0}
+                                    onChange={(e) => handleSelectedShapePropertyChange('rectangleBorderRadius', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Opacity (%)</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full"
+                                    min="0"
+                                    max="100"
+                                    value={selectedShape.rectangleOpacity || 100}
+                                    onChange={(e) => handleSelectedShapePropertyChange('rectangleOpacity', parseInt(e.target.value))}
+                                />
+                            </div>
+                        </>
+                    );
+                case 'circle':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Fill Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.color}
+                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.circleBorderColor || '#000000'}
+                                    onChange={(e) => handleSelectedShapePropertyChange('circleBorderColor', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Width</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full"
+                                    min="0"
+                                    max="20"
+                                    value={selectedShape.strokeWidth}
+                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Opacity (%)</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full"
+                                    min="0"
+                                    max="100"
+                                    value={selectedShape.circleOpacity || 100}
+                                    onChange={(e) => handleSelectedShapePropertyChange('circleOpacity', parseInt(e.target.value))}
+                                />
+                            </div>
+                        </>
+                    );
+                case 'eraser':
+                    return (
+                        <div className="mb-2">
+                            <label className="text-sm font-medium">Eraser Size</label>
+                            <input
+                                type="number"
+                                className="block mt-1 w-full"
+                                min="1"
+                                max="100"
+                                value={eraserSize}
+                                onChange={(e) => setEraserSize(parseInt(e.target.value))}
+                            />
+                        </div>
+                    );
+                default:
+                    return null;
+            }
+        } else {
+            return (
+                <div className="text-sm">
+                    Select a shape to edit its properties.
+                </div>
+            );
+        }
+    };
+
+    const drawResizeHandles = (ctx: CanvasRenderingContext2D, shape: Shape) => {
+        if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
+            const handleSize = 8;
+            const handles = [
+                { x: shape.startX!, y: shape.startY!, cursor: 'nwse-resize' },
+                { x: shape.startX! + shape.width!, y: shape.startY!, cursor: 'nesw-resize' },
+                { x: shape.startX!, y: shape.startY! + shape.height!, cursor: 'nesw-resize' },
+                { x: shape.startX! + shape.width!, y: shape.startY! + shape.height!, cursor: 'nwse-resize' },
+            ];
+
+            ctx.fillStyle = '#00FFFF';
+            handles.forEach(handle => {
+                ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
+            });
+        }
+    };
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            if (isResizing) {
+                canvas.style.cursor = resizeHandle || 'default';
+            } else if (isMoving || (selectedShapes.length > 0 && selectedTool === 'pointer')) {
+                canvas.style.cursor = 'move';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+        }
+    }, [isResizing, isMoving, resizeHandle, selectedShapes.length, selectedTool]);
+
+    const handleSignIn = () => {
+        console.log("Signing in");  
+        wallet.signIn();
+    };
+
+    const handleSignOut = () => {
+        wallet.signOut().then(() => {
+            setIsSignedIn(false);
+            setAccountId('');
+            showModal("You have been signed out successfully.");
+        }).catch((error) => {
+            console.error("Sign out failed:", error);
+            showModal("Sign out failed. Please try again.");
+        });
+    };
+
+    const isShapeInSelection = (shape: Shape): boolean => {
+        if (!selectionStart || !selectionEnd) return false;
+
+        const left = Math.min(selectionStart.x, selectionEnd.x);
+        const right = Math.max(selectionStart.x, selectionEnd.x);
+        const top = Math.min(selectionStart.y, selectionEnd.y);
+        const bottom = Math.max(selectionStart.y, selectionEnd.y);
+
+        if (shape.tool === 'brush' && shape.points) {
+            // Check if any point of the brush stroke is within the selection box
+            return shape.points.some(point => 
+                point.x >= left && point.x <= right && point.y >= top && point.y <= bottom
+            );
+        } else if (shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
+            // For rectangles and circles
+            const shapeLeft = shape.startX;
+            const shapeRight = shape.startX + shape.width;
+            const shapeTop = shape.startY;
+            const shapeBottom = shape.startY + shape.height;
+
+            // Check if the shape overlaps with the selection box
+            return (
+                shapeLeft <= right &&
+                shapeRight >= left &&
+                shapeTop <= bottom &&
+                shapeBottom >= top
+            );
+        }
+
+        return false;
+    };
+
+    useEffect(() => {
+        if (selectionBoxRef.current && selectionStart && selectionEnd) {
+            const left = Math.min(selectionStart.x, selectionEnd.x);
+            const top = Math.min(selectionStart.y, selectionEnd.y);
+            const width = Math.abs(selectionEnd.x - selectionStart.x);
+            const height = Math.abs(selectionEnd.y - selectionStart.y);
+
+            selectionBoxRef.current.style.left = `${left}px`;
+            selectionBoxRef.current.style.top = `${top}px`;
+            selectionBoxRef.current.style.width = `${width}px`;
+            selectionBoxRef.current.style.height = `${height}px`;
+            selectionBoxRef.current.style.display = 'block';
+        } else if (selectionBoxRef.current) {
+            selectionBoxRef.current.style.display = 'none';
+        }
+    }, [selectionStart, selectionEnd]);
+
+    const showModal = (content: React.ReactNode) => {
+        setModalContent(content);
+        setIsModalOpen(true);
+    };
+
+    const exportSelectionAsImage = () => {
+        if (!isSignedIn) {
+            showModal("Please connect your NEAR wallet to export selections.");
+            return;
+        }
+        if (selectedShapes.length === 0) {
+            showModal("No shapes selected. Please select shapes to export.");
+            return;
+        }
+
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        if (!tempCtx) return;
+
+        // Calculate the bounding box of selected shapes
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        selectedShapes.forEach(shape => {
+            if (shape.startX !== undefined && shape.startY !== undefined) {
+                minX = Math.min(minX, shape.startX);
+                minY = Math.min(minY, shape.startY);
+                maxX = Math.max(maxX, shape.startX + (shape.width || 0));
+                maxY = Math.max(maxY, shape.startY + (shape.height || 0));
+            }
+            if (shape.points) {
+                shape.points.forEach(point => {
+                    minX = Math.min(minX, point.x);
+                    minY = Math.min(minY, point.y);
+                    maxX = Math.max(maxX, point.x);
+                    maxY = Math.max(maxY, point.y);
+                });
+            }
+        });
+
+        // Set the temp canvas size to the bounding box
+        tempCanvas.width = maxX - minX;
+        tempCanvas.height = maxY - minY;
+
+        // Draw selected shapes on the temp canvas
+        selectedShapes.forEach(shape => {
+            drawShape(tempCtx, {
+                ...shape,
+                startX: shape.startX ? shape.startX - minX : undefined,
+                startY: shape.startY ? shape.startY - minY : undefined,
+                points: shape.points ? shape.points.map(p => ({ x: p.x - minX, y: p.y - minY })) : undefined,
+            }, true);  // Pass true for isExporting
+        });
+
+        // Convert the temp canvas to a data URL and trigger download
+        const dataUrl = tempCanvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = 'selected_shapes.png';
+        link.href = dataUrl;
+        link.click();
+    };
+
+    const handleMint = () => {
+        if (!isSignedIn) {
+            showModal("Please connect your NEAR wallet to mint.");
+            return;
+        }
+        if (selectedShapes.length === 0) {
+            showModal("No shapes selected. Please select shapes to mint as an NFT.");
+            return;
+        }
+        setIsMinting(true);
+        showMintModal();
+    };
+
+    const showMintModal = () => {
+        setModalContent(
+            <div>
+                <h3 className="text-lg font-semibold mb-4">Mint Your NFT</h3>
+                <input
+                    type="text"
+                    placeholder="NFT Title"
+                    className="w-full p-2 mb-4 border rounded"
+                    value={nftTitle}
+                    onChange={(e) => setNftTitle(e.target.value)}
+                />
+                <textarea
+                    placeholder="NFT Description"
+                    className="w-full p-2 mb-4 border rounded"
+                    value={nftDescription}
+                    onChange={(e) => setNftDescription(e.target.value)}
+                />
+                <Button
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    onClick={mintNFT}
+                >
+                    Mint NFT
+                </Button>
+            </div>
+        );
+        setIsModalOpen(true);
+    };
+
+    const mintNFT = async () => {
+        if (!nftTitle || !nftDescription) {
+            showModal("Please provide a title and description for your NFT.");
+            return;
+        }
+
+        setIsMinting(true);
+        showModal("Minting your NFT...");
+
+        try {
+            // Convert selected shapes to image
+            const imageDataUrl = await convertSelectionToImage();
+
+            // Call NEAR contract to mint NFT
+            const result = await wallet.callMethod({
+                method: 'nft_mint',
+                args: {
+                    token_id: `${Date.now()}`,
+                    metadata: {
+                        title: nftTitle,
+                        description: nftDescription,
+                        media: imageDataUrl,
+                    },
+                    receiver_id: wallet.getAccountId(),
+                },
+                deposit: '10000000000000000000000', // Adjust the deposit as needed
+            });
+
+            showModal(`NFT minted successfully! Transaction ID: ${result.transaction.hash}`);
+        } catch (error: unknown) {
+            console.error('Error minting NFT:', error);
+            if (error instanceof Error) {
+                showModal(`Error minting NFT: ${error.message}`);
+            } else {
+                showModal(`An unknown error occurred while minting the NFT.`);
+            }
+        } finally {
+            setIsMinting(false);
+            setNftTitle('');
+            setNftDescription('');
+        }
+    };
+
+    const convertSelectionToImage = (): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            if (!tempCtx) {
+                reject(new Error('Unable to create canvas context'));
+                return;
+            }
+
+            // Calculate the bounding box of selected shapes
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            selectedShapes.forEach(shape => {
+                if (shape.startX !== undefined && shape.startY !== undefined) {
+                    minX = Math.min(minX, shape.startX);
+                    minY = Math.min(minY, shape.startY);
+                    maxX = Math.max(maxX, shape.startX + (shape.width || 0));
+                    maxY = Math.max(maxY, shape.startY + (shape.height || 0));
+                }
+                if (shape.points) {
+                    shape.points.forEach(point => {
+                        minX = Math.min(minX, point.x);
+                        minY = Math.min(minY, point.y);
+                        maxX = Math.max(maxX, point.x);
+                        maxY = Math.max(maxY, point.y);
+                    });
+                }
+            });
+
+            // Set the temp canvas size to the bounding box
+            tempCanvas.width = maxX - minX;
+            tempCanvas.height = maxY - minY;
+
+            // Draw selected shapes on the temp canvas
+            selectedShapes.forEach(shape => {
+                drawShape(tempCtx, {
+                    ...shape,
+                    startX: shape.startX ? shape.startX - minX : undefined,
+                    startY: shape.startY ? shape.startY - minY : undefined,
+                    points: shape.points ? shape.points.map(p => ({ x: p.x - minX, y: p.y - minY })) : undefined,
+                }, true);
+            });
+
+            // Convert the temp canvas to a data URL
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            resolve(dataUrl);
+        });
+    };
+
+    const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const newZoom = Math.min(Math.max(zoom * zoomFactor, 0.1), 5);
+        setZoom(newZoom);
+        setZoomLevel(Math.round(newZoom * 100));
+    };
+
+    const handleZoomIn = () => {
+        const newZoom = Math.min(zoom * 1.1, 5);
+        setZoom(newZoom);
+        setZoomLevel(Math.round(newZoom * 100));
+    };
+
+    const handleZoomOut = () => {
+        const newZoom = Math.max(zoom * 0.9, 0.1);
+        setZoom(newZoom);
+        setZoomLevel(Math.round(newZoom * 100));
+    };
+
+    const handleResetZoom = () => {
+        setZoom(1);
+        setZoomLevel(100);
+    };
+
+    return (
+        <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
+            {/* Top MenuBar */}
+            <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 h-12 w-96 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} border rounded-lg shadow-lg flex items-center px-4 justify-between z-50`}>
+                <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="sm" className="text-xs">
+                        <File className="w-3 h-3 mr-1" />
+                        File
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-xs">View</Button>
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={exportSelectionAsImage}>
+                        Export Selection
+                    </Button>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsDarkMode(!isDarkMode)}
+                    >
+                        {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    </Button>
+                    <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white text-xs" onClick={handleMint}>
+                        Mint
+                    </Button>
+                </div>
+            </div>
+
+            {/* Floating NEAR Wallet Button */}
+            <div className="fixed top-4 right-4 z-50">
+                {isSignedIn ? (
+                    <div className="flex items-center space-x-2 bg-gray-800 text-white px-3 py-2 rounded-lg shadow-lg">
+                        <span className="text-xs">{accountId}</span>
+                        <Button size="sm" onClick={handleSignOut} className="bg-red-500 hover:bg-red-600 text-white text-xs">
+                            Sign Out
+                        </Button>
+                    </div>
+                ) : (
+                    <Button size="sm" onClick={handleSignIn} className="bg-blue-500 hover:bg-blue-600 text-white">
+                        Connect NEAR Wallet
+                    </Button>
+                )}
+            </div>
+
+            {/* Tools Dock */}
+            <div className={`fixed left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} rounded-lg shadow-lg p-2 flex flex-col space-y-2 z-50`}>
+                {tools.map((tool) => (
+                    <Button
+                        key={tool.id}
+                        variant={selectedTool === tool.id ? "default" : "ghost"}
+                        size="icon"
+                        className={`w-10 h-10 ${selectedTool === tool.id ? 'bg-blue-500 text-white' : ''}`}
+                        onClick={() => handleToolSelect(tool.id)}
+                        title={tool.tooltip}
+                    >
+                        <tool.icon className="w-5 h-5" />
+                    </Button>
+                ))}
+            </div>
+
+            {/* Right Sidebar */}
+            <div className={`fixed right-4 top-20 bottom-4 w-64 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} border rounded-lg shadow-lg overflow-hidden z-50 flex flex-col`}>
+                {/* Properties Panel */}
+                <div className="flex-1 border-b overflow-y-auto">
+                    <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-between p-4"
+                        onClick={() => setIsPropertiesOpen(!isPropertiesOpen)}
+                    >
+                        <span className="flex items-center">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Properties
+                        </span>
+                        {isPropertiesOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                    {isPropertiesOpen && (
+                        <div className="p-4">
+                            <div className="space-y-4">
+                                {renderPropertiesPanel()}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Layers Panel */}
+                <div className="flex-1 overflow-y-auto">
+                    <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-between p-4"
+                        onClick={() => setIsLayersOpen(!isLayersOpen)}
+                    >
+                        <span className="flex items-center">
+                            <Layers className="w-4 h-4 mr-2" />
+                            Layers
+                        </span>
+                        {isLayersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                    {isLayersOpen && (
+                        <div className="p-4">
+                            <div className="space-y-2">
+                                {shapes.map((shape, index) => (
+                                    <div
+                                        key={shape.id}
+                                        className={`flex items-center justify-between p-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded ${selectedShapeId === shape.id ? 'border-2 border-blue-500' : ''}`}
+                                        onClick={() => handleShapeSelect(shape.id)}
+                                    >
+                                        <span>Layer {index + 1}</span>
+                                        <div className="flex space-x-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleShapeVisibilityToggle(shape.id);
+                                                }}
+                                            >
+                                                {shape.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleShapeDelete(shape.id);
+                                                }}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Zoom Control UI */}
+            <div className={`fixed bottom-4 right-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-2 flex items-center space-x-2 z-50`}>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleZoomOut}
+                    disabled={zoomLevel <= 10}
+                    title="Zoom Out"
+                >
+                    <ZoomOut className="w-4 h-4" />
+                </Button>
+                <span className="text-sm font-medium">{zoomLevel}%</span>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleZoomIn}
+                    disabled={zoomLevel >= 500}
+                    title="Zoom In"
+                >
+                    <ZoomIn className="w-4 h-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleResetZoom}
+                    title="Reset Zoom"
+                >
+                    <Maximize className="w-4 h-4" />
+                </Button>
+            </div>
+
+            {/* Canvas Area */}
+            <canvas
+                ref={canvasRef}
+                className={`fixed inset-0 ${selectedTool === 'eraser' ? 'cursor-none' : ''}`}
+                width={canvasSize.width}
+                height={canvasSize.height}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
+                style={{
+                    cursor: isPanning ? 'grabbing' : 'default'
+                }}
+            />
+
+            <div
+                ref={selectionBoxRef}
+                className="absolute border-2 border-blue-500 bg-blue-200 opacity-30 pointer-events-none"
+                style={{ display: 'none' }}
+            />
+
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Information"
+                isDarkMode={isDarkMode}
+            >
+                <p>{modalContent}</p>
+                <Button
+                    className={`mt-4 w-full ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                    onClick={() => setIsModalOpen(false)}
+                >
+                    Close
+                </Button>
+            </Modal>
+        </div>
+    );
+};
+
+export default InfiniteCanvas2;
