@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { ConnectedWalletAccount } from 'near-api-js';
 
 const CONTRACT_NAME = process.env.NEXT_PUBLIC_CONTRACT_NAME || 'nft.examples.testnet';
