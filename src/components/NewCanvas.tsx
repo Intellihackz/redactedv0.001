@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X } from 'lucide-react';
+import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
 import { wallet } from '@/utils/near-wallet';
@@ -12,6 +12,10 @@ import ToolBar from './ToolBar';
 import TopMenuBar from './TopMenuBar';
 import { debounce } from 'lodash';
 import dynamic from 'next/dynamic';
+import { saveAs } from 'file-saver';
+import { Input } from "@/components/ui/input";
+import ExportModal from './ExportModal';
+import SaveModal from './SaveModal';
 
 interface Shape {
     id: string;
@@ -74,6 +78,13 @@ const InfiniteCanvas2: React.FC = () => {
     const router = useRouter();
     const [canvasKey, setCanvasKey] = useState(Date.now());
     const [copiedShapes, setCopiedShapes] = useState<Shape[]>([]);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [confirmModalContent, setConfirmModalContent] = useState<React.ReactNode>(null);
+    const [confirmModalAction, setConfirmModalAction] = useState<() => void>(() => {});
+    const [exportFileName, setExportFileName] = useState('');
+    const [saveFileName, setSaveFileName] = useState('');
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
     const tools = [
         { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas (P)', hotkey: 'P' },
@@ -849,13 +860,27 @@ const InfiniteCanvas2: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const exportSelectionAsImage = () => {
-        if (!isSignedIn) {
-            showModal("Please connect your NEAR wallet to export selections.");
-            return;
-        }
+    const showConfirmModal = (content: React.ReactNode, action: () => void) => {
+        setConfirmModalContent(content);
+        setConfirmModalAction(() => action);
+        setIsConfirmModalOpen(true);
+    };
+
+    const showExportModal = () => {
         if (selectedShapes.length === 0) {
             showModal("No shapes selected. Please select shapes to export.");
+            return;
+        }
+        setIsExportModalOpen(true);
+    };
+
+    const showSaveModal = () => {
+        setIsSaveModalOpen(true);
+    };
+
+    const handleExport = (fileName: string) => {
+        if (!fileName) {
+            showModal("Please enter a file name.");
             return;
         }
 
@@ -896,12 +921,26 @@ const InfiniteCanvas2: React.FC = () => {
             }, true);  // Pass true for isExporting
         });
 
-        // Convert the temp canvas to a data URL and trigger download
         const dataUrl = tempCanvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = 'selected_shapes.png';
+        link.download = `${fileName}.png`;
         link.href = dataUrl;
         link.click();
+
+        setIsExportModalOpen(false);
+    };
+
+    const handleSaveCanvasState = (fileName: string) => {
+        if (!fileName) {
+            showModal("Please enter a file name.");
+            return;
+        }
+        const canvasState = JSON.stringify(shapes);
+        const blob = new Blob([canvasState], { type: 'application/json' });
+        saveAs(blob, `${fileName}.nex`);
+        showModal('Canvas state saved successfully.');
+        setIsSaveModalOpen(false);
+        saveCanvasState(); // Call the debounced function to save to localStorage
     };
 
     const handleMint = () => {
@@ -959,7 +998,7 @@ const InfiniteCanvas2: React.FC = () => {
                     metadata: metadata,
                     receiver_id: wallet?.getAccountId(),
                 },
-                deposit: '139890000000000000000000',
+                deposit: '700000000000000000000000',
             });
 
             router.push(`/?transactionHashes=${result.transaction.hash}`);
@@ -1252,13 +1291,91 @@ const InfiniteCanvas2: React.FC = () => {
         };
     }, []);
 
+    const handleClearCanvas = () => {
+        showConfirmModal(
+            <div>
+                <p>Are you sure you want to clear the canvas?</p>
+                <p>This action cannot be undone.</p>
+            </div>,
+            () => {
+                setShapes([]);
+                setSelectedShapes([]);
+                setSelectedShape(null);
+                setSelectedShapeId(null);
+                saveCanvasState();
+                setIsConfirmModalOpen(false);
+            }
+        );
+    };
+
+    const handleLoadCanvasState = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.nex';
+        input.onchange = (e: Event) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target?.result as string;
+                    try {
+                        const loadedShapes = JSON.parse(content);
+                        setShapes(loadedShapes);
+                        setCanvasKey(Date.now()); // Force re-render of canvas
+                        saveCanvasState();
+                        showModal('Canvas state loaded successfully.');
+                    } catch (error) {
+                        console.error('Error parsing canvas state:', error);
+                        showModal('Error loading canvas state. The file may be corrupted.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
+    };
+
+    // Add these new hotkey handlers
+    useHotkeys('ctrl+e', (event) => {
+        event.preventDefault();
+        showExportModal();
+    }, [selectedShapes]);
+
+    useHotkeys('ctrl+m', (event) => {
+        event.preventDefault();
+        handleMint();
+    }, [handleMint]);
+
+    useHotkeys('ctrl+n', (event) => {
+        event.preventDefault();
+        handleClearCanvas();
+    }, [handleClearCanvas]);
+
+    useHotkeys('ctrl+s', (event) => {
+        event.preventDefault();
+        showSaveModal();
+    }, [shapes, saveFileName]);
+
+    useHotkeys('ctrl+o', (event) => {
+        event.preventDefault();
+        handleLoadCanvasState();
+    }, [handleLoadCanvasState]);
+
+    useHotkeys('ctrl+d', (event) => {
+        event.preventDefault();
+        setIsDarkMode(!isDarkMode);
+    }, [isDarkMode]);
+
     return (
         <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
             <TopMenuBar 
                 isDarkMode={isDarkMode}
                 onThemeToggle={() => setIsDarkMode(!isDarkMode)}
-                onExport={exportSelectionAsImage}
+                onExport={showExportModal}
                 onMint={handleMint}
+                onClearCanvas={handleClearCanvas}
+                onSaveCanvasState={showSaveModal}
+                onLoadCanvasState={handleLoadCanvasState}
             />
 
             {/* Floating NEAR Wallet Button */}
@@ -1385,13 +1502,42 @@ const InfiniteCanvas2: React.FC = () => {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={modalType === 'action' ? "Mint NFT" : "Information"}
+                title="Information"
                 isDarkMode={isDarkMode}
                 isMinting={isMinting}
-                type={modalType}
+                type="info"
             >
                 {modalContent}
             </Modal>
+
+            <Modal
+                isOpen={isConfirmModalOpen}
+                onClose={() => setIsConfirmModalOpen(false)}
+                title="Confirm Action"
+                isDarkMode={isDarkMode}
+                isMinting={false}
+                type="action"
+            >
+                {confirmModalContent}
+                <div className="flex justify-end mt-4 space-x-2">
+                    <Button onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>
+                    <Button onClick={confirmModalAction} className="bg-red-500 hover:bg-red-600 text-white">Confirm</Button>
+                </div>
+            </Modal>
+
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExport}
+                isDarkMode={isDarkMode}
+            />
+
+            <SaveModal
+                isOpen={isSaveModalOpen}
+                onClose={() => setIsSaveModalOpen(false)}
+                onSave={handleSaveCanvasState}
+                isDarkMode={isDarkMode}
+            />
         </div>
     );
 };

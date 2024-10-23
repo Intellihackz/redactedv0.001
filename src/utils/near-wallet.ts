@@ -44,8 +44,8 @@ export class Wallet {
     this.walletConnection.requestSignIn({
         contractId: "nft.examples.testnet",
         methodNames: [],
-        successUrl: `${window.location.origin}/draw`,
-        failureUrl: `${window.location.origin}/draw`,
+        successUrl: `${window.location.origin}`,
+        failureUrl: `${window.location.origin}`,
         keyType: 'ed25519'
     });
   }
