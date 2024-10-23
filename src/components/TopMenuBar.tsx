@@ -1,3 +1,6 @@
+/**
+ * This is the main entry point for the React application.
+ */
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Sun, Moon, Download, Upload, Trash2, Save, FolderOpen } from 'lucide-react';

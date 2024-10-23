@@ -10,6 +10,14 @@ interface ExportModalProps {
     isDarkMode: boolean;
 }
 
+/**
+ * Renders an export modal component that allows the user to enter a file name and export an image.
+ *
+ * @param isOpen - A boolean indicating whether the modal should be open or not.
+ * @param onClose - A function to be called when the modal is closed.
+ * @param onExport - A function to be called when the user exports the image, taking the file name as a parameter.
+ * @param isDarkMode - A boolean indicating whether the modal should be rendered in dark mode.
+ */
 const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, isDarkMode }) => {
     const [fileName, setFileName] = useState('');
 

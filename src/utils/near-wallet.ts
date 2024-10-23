@@ -1,3 +1,8 @@
+/**
+ * Provides a wrapper around the NEAR wallet connection and functionality.
+ * This class handles the initialization of the NEAR API, establishing the wallet connection,
+ * and provides methods for signing in, signing out, and interacting with the contract.
+ */
 /* eslint-disable */
 import { ConnectedWalletAccount } from 'near-api-js';
 
