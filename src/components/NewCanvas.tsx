@@ -586,7 +586,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Brush Size</label>
                                 <input
                                     type="number"
-                                    className="block mt-1 w-full bg-white dark:bg-gray-700 text-black dark:text-white"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
                                     min="1"
                                     max="50"
                                     value={selectedShape.strokeWidth}
@@ -620,7 +620,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Border Width</label>
                                 <input
                                     type="number"
-                                    className="block mt-1 w-full"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="20"
                                     value={selectedShape.strokeWidth}
@@ -631,7 +631,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Border Radius</label>
                                 <input
                                     type="number"
-                                    className="block mt-1 w-full"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="50"
                                     value={selectedShape.rectangleBorderRadius || 0}
@@ -642,7 +642,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Opacity (%)</label>
                                 <input
                                     type="number"
-                                    className="block mt-1 w-full"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="100"
                                     value={selectedShape.rectangleOpacity || 100}
@@ -676,7 +676,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Border Width</label>
                                 <input
                                     type="number"
-                                    className="block mt-1 w-full"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="20"
                                     value={selectedShape.strokeWidth}
@@ -687,7 +687,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Opacity (%)</label>
                                 <input
                                     type="number"
-                                    className="block mt-1 w-full"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="100"
                                     value={selectedShape.circleOpacity || 100}
