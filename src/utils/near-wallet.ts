@@ -1,6 +1,6 @@
 import { connect, keyStores, WalletConnection, ConnectedWalletAccount } from 'near-api-js';
 
-const CONTRACT_NAME = process.env.NEXT_PUBLIC_CONTRACT_NAME || 'test.testnet';
+const CONTRACT_NAME = process.env.NEXT_PUBLIC_CONTRACT_NAME || 'nft.examples.testnet';
 
 const connectionConfig = {
   networkId: "testnet",
@@ -22,7 +22,7 @@ export class Wallet {
 
   signIn() {
     this.walletConnection?.requestSignIn({
-        contractId: "test.testnet",
+        contractId: "nft.examples.testnet",
         methodNames: [], // Add methods you want to call as an array here
         successUrl: `${window.location.origin}`, // optional redirect URL on success
         failureUrl: `${window.location.origin}`,

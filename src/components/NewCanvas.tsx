@@ -1,10 +1,15 @@
 "use client"
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Brush, Square, Circle, ChevronUp, ChevronDown, Sun, Moon, File, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Brush, Square, Circle, ChevronUp, ChevronDown, Sun, Moon, File, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
 import { wallet } from '@/utils/near-wallet';
 import Modal from '@/components/Modal';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { useRouter } from 'next/navigation';
+import ToolBar from './ToolBar';
+import TopMenuBar from './TopMenuBar';
+import { debounce } from 'lodash';
 
 interface Shape {
     id: string;
@@ -34,11 +39,12 @@ interface Shape {
     circleBorderWidth?: number;
     circleRotation?: number;
     isSelected?: boolean;
+    zIndex: number;
 }
 
 const InfiniteCanvas2: React.FC = () => {
     const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
-    const [selectedTool, setSelectedTool] = useState<string>('cursor');
+    const [selectedTool, setSelectedTool] = useState<string>('pointer');
     const [isPropertiesOpen, setIsPropertiesOpen] = useState<boolean>(true);
     const [isLayersOpen, setIsLayersOpen] = useState<boolean>(true);
     const [fillColor, setFillColor] = useState<string>('#000000');
@@ -88,13 +94,17 @@ const InfiniteCanvas2: React.FC = () => {
     const [nftTitle, setNftTitle] = useState('');
     const [nftDescription, setNftDescription] = useState('');
     const [zoomLevel, setZoomLevel] = useState(100);
+    const [copiedShapes, setCopiedShapes] = useState<Shape[]>([]);
+    const [modalType, setModalType] = useState<'action' | 'info'>('info');
+    const router = useRouter();
+    const [canvasKey, setCanvasKey] = useState(Date.now());
 
     const tools = [
-        { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas' },
-        { id: 'brush', icon: Brush, tooltip: 'Draw freely on the canvas' },
-        { id: 'rectangle', icon: Square, tooltip: 'Input rectangle shape on canvas' },
-        { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas' },
-        { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas' },
+        { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas (P)', hotkey: 'P' },
+        { id: 'brush', icon: Brush, tooltip: 'Draw freely on the canvas (B)', hotkey: 'B' },
+        { id: 'rectangle', icon: Square, tooltip: 'Input rectangle shape on canvas (R)', hotkey: 'R' },
+        { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas (C)', hotkey: 'C' },
+        { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas (E)', hotkey: 'E' },
     ];
 
     const handleToolSelect = useCallback((toolId: string) => {
@@ -135,19 +145,39 @@ const InfiniteCanvas2: React.FC = () => {
         });
     }, []);
 
-    useEffect(() => {
+    // Add these new functions
+    const saveCanvasState = useCallback(
+        debounce(() => {
+            console.log('Saving canvas state:', shapes);
+            localStorage.setItem('canvasData', JSON.stringify(shapes));
+        }, 500),
+        [shapes]
+    );
+
+    const loadCanvasState = useCallback(() => {
         const savedData = localStorage.getItem('canvasData');
         if (savedData) {
-            setShapes(JSON.parse(savedData));
+            const parsedData = JSON.parse(savedData);
+            console.log('Loading canvas state:', parsedData);
+            setShapes(parsedData);
+            setCanvasKey(Date.now()); // Force re-render of canvas
         }
     }, []);
 
+    // Add this useEffect to load the canvas state when the component mounts
     useEffect(() => {
-        localStorage.setItem('canvasData', JSON.stringify(shapes));
-    }, [shapes]);
+        loadCanvasState();
+    }, [loadCanvasState]);
+
+    // Modify this useEffect to save the canvas state whenever shapes change
+    useEffect(() => {
+        if (shapes.length > 0) {
+            saveCanvasState();
+        }
+    }, [shapes, saveCanvasState]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (e.button === 1 || (e.button === 0 && e.altKey)) { // Middle mouse button or Alt + left click
+        if (e.button === 1 || (e.button === 0 && e.altKey)) {
             setIsPanning(true);
             setMoveStartX(e.clientX);
             setMoveStartY(e.clientY);
@@ -158,11 +188,11 @@ const InfiniteCanvas2: React.FC = () => {
         const canvas = canvasRef.current;
         if (canvas) {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const x = (e.clientX - rect.left - panOffset.x) / zoom;
+            const y = (e.clientY - rect.top - panOffset.y) / zoom;
 
             if (selectedTool === 'pointer') {
-                const clickedShape = shapes.find(shape => {
+                const clickedShapes = shapes.filter(shape => {
                     if (shape.tool === 'brush' && shape.points) {
                         return shape.points.some(point => {
                             return x >= point.x && x <= point.x + shape.strokeWidth && y >= point.y && y <= point.y + shape.strokeWidth;
@@ -173,25 +203,28 @@ const InfiniteCanvas2: React.FC = () => {
                         return Math.sqrt((x - (shape.startX + shape.width / 2)) ** 2 + (y - (shape.startY + shape.height / 2)) ** 2) <= shape.width / 2;
                     }
                     return false;
-                });
+                }).sort((a, b) => b.zIndex - a.zIndex);
 
-                if (clickedShape) {
-                    if (!e.shiftKey) {
-                        // If shift is not pressed, clear previous selection and select only this shape
-                        setSelectedShapes([]);
-                        handleShapeSelect(clickedShape.id);
+                if (clickedShapes.length > 0) {
+                    const topShape = clickedShapes[0];
+                    const resizeHandleCursor = isPointInResizeHandle(x, y, topShape);
+
+                    if (resizeHandleCursor) {
+                        setIsResizing(true);
+                        setResizeHandle(resizeHandleCursor);
+                        setSelectedShape(topShape);
                     } else {
-                        // If shift is pressed, toggle this shape in the selection
-                        handleShapeSelect(clickedShape.id);
+                        handleShapeSelect(topShape.id, e.shiftKey);
+                        setIsMoving(true);
                     }
 
-                    setIsMoving(true);
                     setMoveStartX(x);
                     setMoveStartY(y);
                 } else {
                     // Clicked outside any shape, deselect all
                     setSelectedShapes([]);
                     setSelectedShape(null);
+                    setSelectedShapeId(null);
                     
                     // Start multi-select
                     setIsSelecting(true);
@@ -215,7 +248,8 @@ const InfiniteCanvas2: React.FC = () => {
                             color: fillColor,
                             strokeWidth: brushSize,
                             isVisible: true,
-                            isSelected: false
+                            isSelected: false,
+                            zIndex: shapes.length, // Set zIndex to the current number of shapes
                         };
                         setShapes([...shapes, newShape]);
                         break;
@@ -235,7 +269,8 @@ const InfiniteCanvas2: React.FC = () => {
                             rectangleBorderColor: rectangleBorderColor,
                             rectangleBorderRadius: rectangleBorderRadius,
                             rectangleOpacity: rectangleOpacity,
-                            rectangleRotation: rectangleRotation
+                            rectangleRotation: rectangleRotation,
+                            zIndex: shapes.length, // Set zIndex to the current number of shapes
                         };
                         setShapes([...shapes, newRect]);
                         break;
@@ -254,7 +289,8 @@ const InfiniteCanvas2: React.FC = () => {
                             isSelected: false,
                             circleBorderColor: circleBorderColor,
                             circleOpacity: circleOpacity,
-                            circleRotation: circleRotation
+                            circleRotation: circleRotation,
+                            zIndex: shapes.length, // Set zIndex to the current number of shapes
                         };
                         setShapes([...shapes, newCircle]);
                         break;
@@ -282,8 +318,8 @@ const InfiniteCanvas2: React.FC = () => {
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left - panOffset.x) / zoom;
+        const y = (e.clientY - rect.top - panOffset.y) / zoom;
 
         if (isSelecting) {
             setSelectionEnd({ x, y });
@@ -292,7 +328,7 @@ const InfiniteCanvas2: React.FC = () => {
             const dy = y - moveStartY;
 
             setShapes(prevShapes => prevShapes.map(shape => 
-                selectedShapes.find(s => s.id === shape.id)
+                selectedShapes.some(s => s.id === shape.id)
                     ? {
                         ...shape,
                         startX: (shape.startX || 0) + dx,
@@ -301,6 +337,13 @@ const InfiniteCanvas2: React.FC = () => {
                     }
                     : shape
             ));
+
+            setSelectedShapes(prevSelected => prevSelected.map(shape => ({
+                ...shape,
+                startX: (shape.startX || 0) + dx,
+                startY: (shape.startY || 0) + dy,
+                points: shape.points?.map(point => ({ x: point.x + dx, y: point.y + dy }))
+            })));
 
             setMoveStartX(x);
             setMoveStartY(y);
@@ -357,7 +400,6 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     const handleMouseUp = () => {
-        setIsPanning(false);
         if (isSelecting) {
             const newSelectedShapes = shapes.filter(shape => isShapeInSelection(shape));
             setSelectedShapes(prev => [...prev, ...newSelectedShapes]);
@@ -369,31 +411,36 @@ const InfiniteCanvas2: React.FC = () => {
         setIsResizing(false);
         setIsMoving(false);
         setResizeHandle(null);
+        setIsPanning(false);
+        // Save the canvas state after any changes
+        saveCanvasState();
     };
 
-    const handleShapeSelect = (id: string) => {
+    const handleShapeSelect = (id: string, isMultiSelect: boolean = false) => {
         setShapes(prevShapes => prevShapes.map(shape => ({
             ...shape,
-            isSelected: shape.id === id ? !shape.isSelected : shape.isSelected
+            isSelected: isMultiSelect ? (shape.id === id ? !shape.isSelected : shape.isSelected) : shape.id === id
         })));
         
         setSelectedShapes(prev => {
             const shape = shapes.find(s => s.id === id);
             if (shape) {
-                const isAlreadySelected = prev.some(s => s.id === id);
-                if (isAlreadySelected) {
-                    // If the shape is already selected, remove it from the selection
-                    const updatedSelection = prev.filter(s => s.id !== id);
-                    setSelectedShape(updatedSelection.length > 0 ? updatedSelection[0] : null);
-                    return updatedSelection;
+                if (isMultiSelect) {
+                    const isAlreadySelected = prev.some(s => s.id === id);
+                    if (isAlreadySelected) {
+                        return prev.filter(s => s.id !== id);
+                    } else {
+                        return [...prev, shape];
+                    }
                 } else {
-                    // If the shape is not selected, add it to the selection
-                    setSelectedShape(shape);
-                    return [...prev, shape];
+                    return [shape];
                 }
             }
             return prev;
         });
+
+        setSelectedShapeId(id);
+        setSelectedShape(shapes.find(s => s.id === id) || null);
     };
 
     const handleShapeVisibilityToggle = (id: string) => {
@@ -403,7 +450,12 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     const handleShapeDelete = (id: string) => {
-        setShapes(shapes.filter(shape => shape.id !== id));
+        setShapes(prevShapes => {
+            const newShapes = prevShapes.filter(shape => shape.id !== id);
+            // Save the canvas state after deleting a shape
+            saveCanvasState();
+            return newShapes;
+        });
         if (selectedShapeId === id) {
             setSelectedShapeId(null);
         }
@@ -561,7 +613,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Brush Color</label>
                                 <input
                                     type="color"
-                                    className="block mt-1 w-full h-8"
+                                    className="block mt-1 w-full h-8 bg-white dark:bg-gray-700"
                                     value={selectedShape.color}
                                     onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
                                 />
@@ -570,7 +622,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 <label className="text-sm font-medium">Brush Size</label>
                                 <input
                                     type="number"
-                                    className="block mt-1 w-full"
+                                    className="block mt-1 w-full bg-white dark:bg-gray-700 text-black dark:text-white"
                                     min="1"
                                     max="50"
                                     value={selectedShape.strokeWidth}
@@ -710,10 +762,10 @@ const InfiniteCanvas2: React.FC = () => {
         if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
             const handleSize = 8;
             const handles = [
-                { x: shape.startX!, y: shape.startY!, cursor: 'nwse-resize' },
-                { x: shape.startX! + shape.width!, y: shape.startY!, cursor: 'nesw-resize' },
-                { x: shape.startX!, y: shape.startY! + shape.height!, cursor: 'nesw-resize' },
-                { x: shape.startX! + shape.width!, y: shape.startY! + shape.height!, cursor: 'nwse-resize' },
+                { x: shape.startX!, y: shape.startY! },
+                { x: shape.startX! + shape.width!, y: shape.startY! },
+                { x: shape.startX!, y: shape.startY! + shape.height! },
+                { x: shape.startX! + shape.width!, y: shape.startY! + shape.height! },
             ];
 
             ctx.fillStyle = '#00FFFF';
@@ -721,6 +773,25 @@ const InfiniteCanvas2: React.FC = () => {
                 ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
             });
         }
+    };
+
+    const isPointInResizeHandle = (x: number, y: number, shape: Shape): string | null => {
+        if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
+            const handleSize = 8;
+            const handles = [
+                { x: shape.startX!, y: shape.startY!, cursor: 'nwse-resize' },
+                { x: shape.startX! + shape.width!, y: shape.startY!, cursor: 'nesw-resize' },
+                { x: shape.startX!, y: shape.startY! + shape.height!, cursor: 'nesw-resize' },
+                { x: shape.startX! + shape.width!, y: shape.startY! + shape.height!, cursor: 'nwse-resize' },
+            ];
+
+            for (const handle of handles) {
+                if (Math.abs(x - handle.x) <= handleSize / 2 && Math.abs(y - handle.y) <= handleSize / 2) {
+                    return handle.cursor;
+                }
+            }
+        }
+        return null;
     };
 
     useEffect(() => {
@@ -761,23 +832,18 @@ const InfiniteCanvas2: React.FC = () => {
         const bottom = Math.max(selectionStart.y, selectionEnd.y);
 
         if (shape.tool === 'brush' && shape.points) {
-            // Check if any point of the brush stroke is within the selection box
             return shape.points.some(point => 
                 point.x >= left && point.x <= right && point.y >= top && point.y <= bottom
             );
         } else if (shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
-            // For rectangles and circles
             const shapeLeft = shape.startX;
             const shapeRight = shape.startX + shape.width;
             const shapeTop = shape.startY;
             const shapeBottom = shape.startY + shape.height;
 
-            // Check if the shape overlaps with the selection box
             return (
-                shapeLeft <= right &&
-                shapeRight >= left &&
-                shapeTop <= bottom &&
-                shapeBottom >= top
+                (shapeLeft <= right && shapeRight >= left) &&
+                (shapeTop <= bottom && shapeBottom >= top)
             );
         }
 
@@ -786,23 +852,28 @@ const InfiniteCanvas2: React.FC = () => {
 
     useEffect(() => {
         if (selectionBoxRef.current && selectionStart && selectionEnd) {
-            const left = Math.min(selectionStart.x, selectionEnd.x);
-            const top = Math.min(selectionStart.y, selectionEnd.y);
-            const width = Math.abs(selectionEnd.x - selectionStart.x);
-            const height = Math.abs(selectionEnd.y - selectionStart.y);
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const rect = canvas.getBoundingClientRect();
+                const left = Math.min(selectionStart.x, selectionEnd.x) * zoom + panOffset.x + rect.left;
+                const top = Math.min(selectionStart.y, selectionEnd.y) * zoom + panOffset.y + rect.top;
+                const width = Math.abs(selectionEnd.x - selectionStart.x) * zoom;
+                const height = Math.abs(selectionEnd.y - selectionStart.y) * zoom;
 
-            selectionBoxRef.current.style.left = `${left}px`;
-            selectionBoxRef.current.style.top = `${top}px`;
-            selectionBoxRef.current.style.width = `${width}px`;
-            selectionBoxRef.current.style.height = `${height}px`;
-            selectionBoxRef.current.style.display = 'block';
+                selectionBoxRef.current.style.left = `${left}px`;
+                selectionBoxRef.current.style.top = `${top}px`;
+                selectionBoxRef.current.style.width = `${width}px`;
+                selectionBoxRef.current.style.height = `${height}px`;
+                selectionBoxRef.current.style.display = 'block';
+            }
         } else if (selectionBoxRef.current) {
             selectionBoxRef.current.style.display = 'none';
         }
-    }, [selectionStart, selectionEnd]);
+    }, [selectionStart, selectionEnd, zoom, panOffset]);
 
     const showModal = (content: React.ReactNode) => {
         setModalContent(content);
+        setModalType('info');
         setIsModalOpen(true);
     };
 
@@ -871,66 +942,55 @@ const InfiniteCanvas2: React.FC = () => {
             return;
         }
         setIsMinting(true);
-        showMintModal();
-    };
-
-    const showMintModal = () => {
+        setModalType('action');
         setModalContent(
-            <div>
-                <h3 className="text-lg font-semibold mb-4">Mint Your NFT</h3>
-                <input
-                    type="text"
-                    placeholder="NFT Title"
-                    className="w-full p-2 mb-4 border rounded"
-                    value={nftTitle}
-                    onChange={(e) => setNftTitle(e.target.value)}
-                />
-                <textarea
-                    placeholder="NFT Description"
-                    className="w-full p-2 mb-4 border rounded"
-                    value={nftDescription}
-                    onChange={(e) => setNftDescription(e.target.value)}
-                />
-                <Button
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                    onClick={mintNFT}
-                >
-                    Mint NFT
-                </Button>
-            </div>
+            <MintForm 
+                onMint={mintNFT} 
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setIsMinting(false);
+                }} 
+            />
         );
         setIsModalOpen(true);
     };
 
-    const mintNFT = async () => {
-        if (!nftTitle || !nftDescription) {
+    const mintNFT = async (title: string, description: string) => {
+        if (!title || !description) {
             showModal("Please provide a title and description for your NFT.");
             return;
         }
 
         setIsMinting(true);
+        setModalType('info');
         showModal("Minting your NFT...");
 
         try {
             // Convert selected shapes to image
             const imageDataUrl = await convertSelectionToImage();
 
-            // Call NEAR contract to mint NFT
+            // Generate a unique token ID
+            const tokenId = `nft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            // Prepare metadata
+            const metadata = {
+                title: title,
+                description: description,
+                media: imageDataUrl,
+            };
+
+            // Call the mintNFT method from the wallet
             const result = await wallet.callMethod({
                 method: 'nft_mint',
                 args: {
-                    token_id: `${Date.now()}`,
-                    metadata: {
-                        title: nftTitle,
-                        description: nftDescription,
-                        media: imageDataUrl,
-                    },
+                    token_id: tokenId,
+                    metadata: metadata,
                     receiver_id: wallet.getAccountId(),
                 },
-                deposit: '10000000000000000000000', // Adjust the deposit as needed
+                deposit: '139890000000000000000000',
             });
 
-            showModal(`NFT minted successfully! Transaction ID: ${result.transaction.hash}`);
+            router.push(`/?transactionHashes=${result.transaction.hash}`);
         } catch (error: unknown) {
             console.error('Error minting NFT:', error);
             if (error instanceof Error) {
@@ -940,8 +1000,6 @@ const InfiniteCanvas2: React.FC = () => {
             }
         } finally {
             setIsMinting(false);
-            setNftTitle('');
-            setNftDescription('');
         }
     };
 
@@ -1018,33 +1076,218 @@ const InfiniteCanvas2: React.FC = () => {
         setZoomLevel(100);
     };
 
-    return (
-        <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
-            {/* Top MenuBar */}
-            <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 h-12 w-96 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} border rounded-lg shadow-lg flex items-center px-4 justify-between z-50`}>
-                <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm" className="text-xs">
-                        <File className="w-3 h-3 mr-1" />
-                        File
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-xs">View</Button>
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={exportSelectionAsImage}>
-                        Export Selection
-                    </Button>
+    const handleCopy = useCallback(() => {
+        const shapesToCopy = shapes.filter(shape => shape.isSelected);
+        setCopiedShapes(shapesToCopy);
+    }, [shapes]);
+
+    const handlePaste = useCallback(() => {
+        if (copiedShapes.length > 0) {
+            const newShapes = copiedShapes.map(shape => ({
+                ...shape,
+                id: uuidv4(),
+                startX: (shape.startX || 0) + 20,
+                startY: (shape.startY || 0) + 20,
+                points: shape.points?.map(point => ({ x: point.x + 20, y: point.y + 20 })),
+                isSelected: false,
+                zIndex: shapes.length + 1,
+            }));
+            setShapes([...shapes, ...newShapes]);
+        }
+    }, [copiedShapes, shapes]);
+
+    // Add these new functions
+    const handleToolHotkey = (toolId: string) => {
+        setSelectedTool(toolId);
+    };
+
+    const handleDeleteSelected = () => {
+        const updatedShapes = shapes.filter(shape => !shape.isSelected);
+        setShapes(updatedShapes);
+        setSelectedShapes([]);
+    };
+
+    const handleHideSelected = () => {
+        const updatedShapes = shapes.map(shape => 
+            shape.isSelected ? { ...shape, isVisible: !shape.isVisible } : shape
+        );
+        setShapes(updatedShapes);
+    };
+
+    const handleMoveSelected = (dx: number, dy: number) => {
+        const updatedShapes = shapes.map(shape => 
+            shape.isSelected ? {
+                ...shape,
+                startX: (shape.startX || 0) + dx,
+                startY: (shape.startY || 0) + dy,
+                points: shape.points?.map(point => ({ x: point.x + dx, y: point.y + dy }))
+            } : shape
+        );
+        setShapes(updatedShapes);
+    };
+
+    // Use the useHotkeys hook for handling hotkeys
+    useHotkeys('p', () => handleToolHotkey('pointer'), []);
+    useHotkeys('b', () => handleToolHotkey('brush'), []);
+    useHotkeys('r', () => handleToolHotkey('rectangle'), []);
+    useHotkeys('c', () => handleToolHotkey('circle'), []);
+    useHotkeys('e', () => handleToolHotkey('eraser'), []);
+    useHotkeys('delete', handleDeleteSelected, [shapes]);
+    useHotkeys('h', handleHideSelected, [shapes]);
+    useHotkeys('up', () => handleMoveSelected(0, -1), [shapes]);
+    useHotkeys('down', () => handleMoveSelected(0, 1), [shapes]);
+    useHotkeys('left', () => handleMoveSelected(-1, 0), [shapes]);
+    useHotkeys('right', () => handleMoveSelected(1, 0), [shapes]);
+
+    // Update the existing useEffect hook for keyboard events
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'c':
+                        e.preventDefault();
+                        handleCopy();
+                        break;
+                    case 'v':
+                        e.preventDefault();
+                        handlePaste();
+                        break;
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleCopy, handlePaste]);
+
+    const renderLayers = () => (
+        <div className="space-y-2">
+            <div className="flex justify-end mb-2">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopy}
+                    disabled={selectedShapes.length === 0}
+                    title="Copy selected shapes (Ctrl+C)"
+                >
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copy
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handlePaste}
+                    disabled={copiedShapes.length === 0}
+                    title="Paste copied shapes (Ctrl+V)"
+                >
+                    <Clipboard className="w-4 h-4 mr-1" />
+                    Paste
+                </Button>
+            </div>
+            {shapes.slice().reverse().map((shape, index) => (
+                <div
+                    key={shape.id}
+                    className={`flex items-center justify-between p-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded ${shape.isSelected ? 'border-2 border-blue-500' : ''}`}
+                    onClick={(e) => handleShapeSelect(shape.id, e.ctrlKey || e.metaKey)}
+                >
+                    <span className="text-sm truncate flex-grow">{`Layer ${shapes.length - index}: ${shape.tool}`}</span>
+                    <div className="flex space-x-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleShapeVisibilityToggle(shape.id);
+                            }}
+                        >
+                            {shape.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleShapeDelete(shape.id);
+                            }}
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex items-center space-x-2">
+            ))}
+        </div>
+    );
+
+    const MintForm: React.FC<{ onMint: (title: string, description: string) => void; onClose: () => void }> = ({ onMint, onClose }) => {
+        const [title, setTitle] = useState('');
+        const [description, setDescription] = useState('');
+
+        return (
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Mint Your NFT</h3>
                     <Button
                         variant="ghost"
-                        size="icon"
-                        onClick={() => setIsDarkMode(!isDarkMode)}
+                        size="sm"
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     >
-                        {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </Button>
-                    <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white text-xs" onClick={handleMint}>
-                        Mint
+                        <X className="h-5 w-5" />
                     </Button>
                 </div>
+                <input
+                    type="text"
+                    placeholder="NFT Title"
+                    className="w-full p-2 mb-4 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                />
+                <textarea
+                    placeholder="NFT Description"
+                    className="w-full p-2 mb-4 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                />
+                <Button
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    onClick={() => onMint(title, description)}
+                >
+                    Mint NFT
+                </Button>
             </div>
+        );
+    };
+
+    // Add this function to handle the transaction hash
+    useEffect(() => {
+        const handleTransactionHash = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const transactionHashes = urlParams.get('transactionHashes');
+            if (transactionHashes) {
+                showModal(`NFT minted successfully! Transaction hash: ${transactionHashes}`);
+                // Clear the URL parameter after showing the modal
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        };
+
+        handleTransactionHash();
+
+        // Listen for route changes
+        window.addEventListener('popstate', handleTransactionHash);
+
+        return () => {
+            window.removeEventListener('popstate', handleTransactionHash);
+        };
+    }, []);
+
+    return (
+        <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
+            <TopMenuBar 
+                isDarkMode={isDarkMode}
+                onThemeToggle={() => setIsDarkMode(!isDarkMode)}
+                onExport={exportSelectionAsImage}
+                onMint={handleMint}
+            />
 
             {/* Floating NEAR Wallet Button */}
             <div className="fixed top-4 right-4 z-50">
@@ -1062,21 +1305,11 @@ const InfiniteCanvas2: React.FC = () => {
                 )}
             </div>
 
-            {/* Tools Dock */}
-            <div className={`fixed left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} rounded-lg shadow-lg p-2 flex flex-col space-y-2 z-50`}>
-                {tools.map((tool) => (
-                    <Button
-                        key={tool.id}
-                        variant={selectedTool === tool.id ? "default" : "ghost"}
-                        size="icon"
-                        className={`w-10 h-10 ${selectedTool === tool.id ? 'bg-blue-500 text-white' : ''}`}
-                        onClick={() => handleToolSelect(tool.id)}
-                        title={tool.tooltip}
-                    >
-                        <tool.icon className="w-5 h-5" />
-                    </Button>
-                ))}
-            </div>
+            <ToolBar 
+                selectedTool={selectedTool}
+                onToolSelect={handleToolSelect}
+                isDarkMode={isDarkMode}
+            />
 
             {/* Right Sidebar */}
             <div className={`fixed right-4 top-20 bottom-4 w-64 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} border rounded-lg shadow-lg overflow-hidden z-50 flex flex-col`}>
@@ -1117,39 +1350,7 @@ const InfiniteCanvas2: React.FC = () => {
                     </Button>
                     {isLayersOpen && (
                         <div className="p-4">
-                            <div className="space-y-2">
-                                {shapes.map((shape, index) => (
-                                    <div
-                                        key={shape.id}
-                                        className={`flex items-center justify-between p-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded ${selectedShapeId === shape.id ? 'border-2 border-blue-500' : ''}`}
-                                        onClick={() => handleShapeSelect(shape.id)}
-                                    >
-                                        <span>Layer {index + 1}</span>
-                                        <div className="flex space-x-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleShapeVisibilityToggle(shape.id);
-                                                }}
-                                            >
-                                                {shape.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleShapeDelete(shape.id);
-                                                }}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            {renderLayers()}
                         </div>
                     )}
                 </div>
@@ -1188,6 +1389,7 @@ const InfiniteCanvas2: React.FC = () => {
 
             {/* Canvas Area */}
             <canvas
+                key={canvasKey}
                 ref={canvasRef}
                 className={`fixed inset-0 ${selectedTool === 'eraser' ? 'cursor-none' : ''}`}
                 width={canvasSize.width}
@@ -1204,23 +1406,19 @@ const InfiniteCanvas2: React.FC = () => {
 
             <div
                 ref={selectionBoxRef}
-                className="absolute border-2 border-blue-500 bg-blue-200 opacity-30 pointer-events-none"
+                className="fixed border-2 border-blue-500 bg-blue-200 opacity-30 pointer-events-none"
                 style={{ display: 'none' }}
             />
 
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Information"
+                title={modalType === 'action' ? "Mint NFT" : "Information"}
                 isDarkMode={isDarkMode}
+                isMinting={isMinting}
+                type={modalType}
             >
-                <p>{modalContent}</p>
-                <Button
-                    className={`mt-4 w-full ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
-                    onClick={() => setIsModalOpen(false)}
-                >
-                    Close
-                </Button>
+                {modalContent}
             </Modal>
         </div>
     );
