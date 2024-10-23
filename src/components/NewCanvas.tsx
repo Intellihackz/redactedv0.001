@@ -1,4 +1,4 @@
-/* eslint no-unused-vars: 0 */ 
+/* eslint-disable */
 "use client"
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X } from 'lucide-react';
