@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import InfiniteCanvas2 from '@/components/NewCanvas';
 import { wallet } from '@/utils/near-wallet';
+import { LandingPage } from '@/components/landing-page';
 
 export default function Home() {
   const [walletReady, setWalletReady] = useState(false);
@@ -15,7 +16,7 @@ export default function Home() {
   }, []);
 
   if (!walletReady) {
-    return <div>Loading...</div>;
+    return <div><LandingPage /></div>;
   }
 
   return <InfiniteCanvas2 />;
