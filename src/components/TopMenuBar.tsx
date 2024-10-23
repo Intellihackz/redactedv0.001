@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Sun, Moon, Download, Upload, Save, FolderOpen, Trash2, CreditCard } from 'lucide-react';
+import { Sun, Moon, Download, Save, FolderOpen, Trash2, CreditCard } from 'lucide-react';
 
 interface TopMenuBarProps {
     isDarkMode: boolean;
