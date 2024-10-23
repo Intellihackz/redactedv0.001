@@ -22,11 +22,6 @@ interface Shape {
     width?: number;
     height?: number;
     isVisible: boolean;
-    // New properties
-    brushSize?: number;
-    brushOpacity?: number;
-    brushHardness?: number;
-    brushFlow?: number;
     rectangleBorderRadius?: number;
     rectangleFill?: string;
     rectangleBorderColor?: string;
@@ -47,33 +42,14 @@ const InfiniteCanvas2: React.FC = () => {
     const [selectedTool, setSelectedTool] = useState<string>('pointer');
     const [isPropertiesOpen, setIsPropertiesOpen] = useState<boolean>(true);
     const [isLayersOpen, setIsLayersOpen] = useState<boolean>(true);
-    const [fillColor, setFillColor] = useState<string>('#000000');
-    const [strokeWidth, setStrokeWidth] = useState<number>(2);
     const [shapes, setShapes] = useState<Shape[]>([]);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-    const [brushSize, setBrushSize] = useState<number>(5);
-    const [brushOpacity, setBrushOpacity] = useState<number>(100);
-    const [brushHardness, setBrushHardness] = useState<number>(50);
-    const [brushFlow, setBrushFlow] = useState<number>(100);
-    const [rectangleBorderRadius, setRectangleBorderRadius] = useState<number>(0);
-    const [rectangleFill, setRectangleFill] = useState<string>('#ffffff');
-    const [rectangleBorderColor, setRectangleBorderColor] = useState<string>('#000000');
-    const [rectangleBorderWidth, setRectangleBorderWidth] = useState<number>(1);
-    const [rectangleOpacity, setRectangleOpacity] = useState<number>(100);
-    const [rectangleRotation, setRectangleRotation] = useState<number>(0);
-    const [circleOpacity, setCircleOpacity] = useState<number>(100);
-    const [circleFill, setCircleFill] = useState<string>('#ffffff');
-    const [circleBorderColor, setCircleBorderColor] = useState<string>('#000000');
-    const [circleBorderWidth, setCircleBorderWidth] = useState<number>(1);
-    const [circleRotation, setCircleRotation] = useState<number>(0);
     const [selectedShape, setSelectedShape] = useState<Shape | null>(null);
     const [isResizing, setIsResizing] = useState(false);
     const [resizeHandle, setResizeHandle] = useState<string | null>(null);
-    const [resizeStartX, setResizeStartX] = useState(0);
-    const [resizeStartY, setResizeStartY] = useState(0);
     const [isMoving, setIsMoving] = useState(false);
     const [moveStartX, setMoveStartX] = useState(0);
     const [moveStartY, setMoveStartY] = useState(0);
@@ -91,13 +67,11 @@ const InfiniteCanvas2: React.FC = () => {
     const [zoom, setZoom] = useState(1);
     const [isPanning, setIsPanning] = useState(false);
     const [isMinting, setIsMinting] = useState(false);
-    const [nftTitle, setNftTitle] = useState('');
-    const [nftDescription, setNftDescription] = useState('');
     const [zoomLevel, setZoomLevel] = useState(100);
-    const [copiedShapes, setCopiedShapes] = useState<Shape[]>([]);
     const [modalType, setModalType] = useState<'action' | 'info'>('info');
     const router = useRouter();
     const [canvasKey, setCanvasKey] = useState(Date.now());
+    const [copiedShapes, setCopiedShapes] = useState<Shape[]>([]);
 
     const tools = [
         { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas (P)', hotkey: 'P' },
@@ -123,17 +97,6 @@ const InfiniteCanvas2: React.FC = () => {
 
         return () => window.removeEventListener('resize', updateCanvasSize);
     }, []);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.fillStyle = fillColor;
-                ctx.lineWidth = strokeWidth;
-            }
-        }
-    }, [fillColor, strokeWidth]);
 
     useEffect(() => {
         wallet.startUp().then((signedIn) => {
@@ -245,8 +208,8 @@ const InfiniteCanvas2: React.FC = () => {
                             id: uuidv4(),
                             tool: 'brush',
                             points: [{ x, y }],
-                            color: fillColor,
-                            strokeWidth: brushSize,
+                            color: '#000000',
+                            strokeWidth: 2,
                             isVisible: true,
                             isSelected: false,
                             zIndex: shapes.length, // Set zIndex to the current number of shapes
@@ -262,14 +225,14 @@ const InfiniteCanvas2: React.FC = () => {
                             startY: y,
                             width: 0,
                             height: 0,
-                            color: rectangleFill,
-                            strokeWidth: rectangleBorderWidth,
+                            color: '#ffffff',
+                            strokeWidth: 1,
                             isVisible: true,
                             isSelected: false,
-                            rectangleBorderColor: rectangleBorderColor,
-                            rectangleBorderRadius: rectangleBorderRadius,
-                            rectangleOpacity: rectangleOpacity,
-                            rectangleRotation: rectangleRotation,
+                            rectangleBorderColor: '#000000',
+                            rectangleBorderRadius: 0,
+                            rectangleOpacity: 100,
+                            rectangleRotation: 0,
                             zIndex: shapes.length, // Set zIndex to the current number of shapes
                         };
                         setShapes([...shapes, newRect]);
@@ -283,13 +246,13 @@ const InfiniteCanvas2: React.FC = () => {
                             startY: y,
                             width: 0,
                             height: 0,
-                            color: circleFill,
-                            strokeWidth: circleBorderWidth,
+                            color: '#ffffff',
+                            strokeWidth: 1,
                             isVisible: true,
                             isSelected: false,
-                            circleBorderColor: circleBorderColor,
-                            circleOpacity: circleOpacity,
-                            circleRotation: circleRotation,
+                            circleBorderColor: '#000000',
+                            circleOpacity: 100,
+                            circleRotation: 0,
                             zIndex: shapes.length, // Set zIndex to the current number of shapes
                         };
                         setShapes([...shapes, newCircle]);
@@ -1083,12 +1046,12 @@ const InfiniteCanvas2: React.FC = () => {
 
     const handlePaste = useCallback(() => {
         if (copiedShapes.length > 0) {
-            const newShapes = copiedShapes.map(shape => ({
+            const newShapes = copiedShapes.map((shape: Shape) => ({
                 ...shape,
                 id: uuidv4(),
                 startX: (shape.startX || 0) + 20,
                 startY: (shape.startY || 0) + 20,
-                points: shape.points?.map(point => ({ x: point.x + 20, y: point.y + 20 })),
+                points: shape.points?.map((point: { x: number; y: number }) => ({ x: point.x + 20, y: point.y + 20 })),
                 isSelected: false,
                 zIndex: shapes.length + 1,
             }));
