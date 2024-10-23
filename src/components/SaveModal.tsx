@@ -40,7 +40,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, onClose, onSave, isDarkMo
                 placeholder="Enter file name"
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
-                className="mb-4"
+                className="mb-4 text-black dark:text-white"
             />
             <Button onClick={handleSave}>Save</Button>
         </Modal>

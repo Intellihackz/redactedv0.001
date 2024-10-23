@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { MousePointer2, Brush, Square, Circle, Eraser } from 'lucide-react';
+import { MousePointer2, Brush, Square, Circle, Eraser, Type } from 'lucide-react';
 
 interface ToolBarProps {
     selectedTool: string;
@@ -9,11 +9,12 @@ interface ToolBarProps {
 }
 
 const tools = [
-    { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas (P)', hotkey: 'P' },
-    { id: 'brush', icon: Brush, tooltip: 'Draw freely on the canvas (B)', hotkey: 'B' },
-    { id: 'rectangle', icon: Square, tooltip: 'Input rectangle shape on canvas (R)', hotkey: 'R' },
-    { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas (C)', hotkey: 'C' },
-    { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas (E)', hotkey: 'E' },
+    { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas ', hotkey: 'P' },
+    { id: 'brush', icon: Brush, tooltip: 'Draw freely on the canvas ', hotkey: 'B' },
+    { id: 'rectangle', icon: Square, tooltip: 'Input rectangle shape on canvas ', hotkey: 'R' },
+    { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas ', hotkey: 'C' },
+    { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas ', hotkey: 'E' },
+    { id: 'text', icon: Type, tooltip: 'Add text to the canvas ', hotkey: 'T' },
 ];
 
 const ToolBar: React.FC<ToolBarProps> = ({ selectedTool, onToolSelect, isDarkMode }) => (

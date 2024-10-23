@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen } from 'lucide-react';
+import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen, Type } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
 import { wallet } from '@/utils/near-wallet';
@@ -41,6 +41,9 @@ interface Shape {
     circleRotation?: number;
     isSelected?: boolean;
     zIndex: number;
+    text?: string;
+    fontSize?: number;
+    fontFamily?: string;
 }
 
 const InfiniteCanvas2: React.FC = () => {
@@ -85,6 +88,8 @@ const InfiniteCanvas2: React.FC = () => {
     const [saveFileName, setSaveFileName] = useState('');
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isAddingText, setIsAddingText] = useState(false);
+    const [textInputPosition, setTextInputPosition] = useState<{ x: number; y: number } | null>(null);
 
     const tools = [
         { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas (P)', hotkey: 'P' },
@@ -92,6 +97,7 @@ const InfiniteCanvas2: React.FC = () => {
         { id: 'rectangle', icon: Square, tooltip: 'Input rectangle shape on canvas (R)', hotkey: 'R' },
         { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas (C)', hotkey: 'C' },
         { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas (E)', hotkey: 'E' },
+        { id: 'text', icon: Type, tooltip: 'Add text to the canvas (T)', hotkey: 'T' },
     ];
 
     const handleToolSelect = useCallback((toolId: string) => {
@@ -172,6 +178,12 @@ const InfiniteCanvas2: React.FC = () => {
             const x = (e.clientX - rect.left - panOffset.x) / zoom;
             const y = (e.clientY - rect.top - panOffset.y) / zoom;
 
+            if (selectedTool === 'text') {
+                setTextInputPosition({ x, y });
+                setIsAddingText(true);
+                return; // Exit the function early for text tool
+            }
+
             if (selectedTool === 'pointer') {
                 const clickedShapes = shapes.filter(shape => {
                     if (shape.tool === 'brush' && shape.points) {
@@ -182,6 +194,19 @@ const InfiniteCanvas2: React.FC = () => {
                         return x >= shape.startX && x <= shape.startX + shape.width && y >= shape.startY && y <= shape.startY + shape.height;
                     } else if (shape.tool === 'circle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
                         return Math.sqrt((x - (shape.startX + shape.width / 2)) ** 2 + (y - (shape.startY + shape.height / 2)) ** 2) <= shape.width / 2;
+                    } else if (shape.tool === 'text' && shape.startX !== undefined && shape.startY !== undefined && shape.fontSize !== undefined) {
+                        // Check if the click is within the text bounding box
+                        const canvas = canvasRef.current;
+                        if (canvas) {
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                const textWidth = ctx.measureText(shape.text || '').width;
+                                const textHeight = shape.fontSize;
+                                return x >= shape.startX && x <= shape.startX + textWidth &&
+                                       y >= shape.startY - textHeight && y <= shape.startY;
+                            }
+                        }
+                        return false;
                     }
                     return false;
                 }).sort((a, b) => b.zIndex - a.zIndex);
@@ -531,6 +556,21 @@ const InfiniteCanvas2: React.FC = () => {
             ctx.fill();
             ctx.stroke();
             ctx.globalAlpha = 1;
+        } else if (shape.tool === 'text' && shape.text && shape.startX !== undefined && shape.startY !== undefined) {
+            ctx.font = `${shape.fontSize}px ${shape.fontFamily}`;
+            ctx.fillStyle = shape.color;
+            ctx.fillText(shape.text, shape.startX, shape.startY);
+
+            // Draw selection box for text if it's selected
+            if (!isExporting && selectedShapes.find(s => s.id === shape.id)) {
+                const textWidth = ctx.measureText(shape.text).width;
+                const textHeight = shape.fontSize || 16; // Use default font size if not specified
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(shape.startX - 2, shape.startY - textHeight - 2, textWidth + 4, textHeight + 4);
+                ctx.setLineDash([]);
+            }
         }
 
         // Only draw selection highlight if not exporting
@@ -727,6 +767,40 @@ const InfiniteCanvas2: React.FC = () => {
                             />
                         </div>
                     );
+                case 'text':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Text Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.color}
+                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Font Size</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    max="100"
+                                    value={selectedShape.fontSize}
+                                    onChange={(e) => handleSelectedShapePropertyChange('fontSize', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Font Family</label>
+                                <input
+                                    type="text"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    value={selectedShape.fontFamily}
+                                    onChange={(e) => handleSelectedShapePropertyChange('fontFamily', e.target.value)}
+                                />
+                            </div>
+                        </>
+                    );
                 default:
                     return null;
             }
@@ -828,6 +902,25 @@ const InfiniteCanvas2: React.FC = () => {
                 (shapeLeft <= right && shapeRight >= left) &&
                 (shapeTop <= bottom && shapeBottom >= top)
             );
+        } else if (shape.tool === 'text' && shape.startX !== undefined && shape.startY !== undefined && shape.fontSize !== undefined && shape.text) {
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.font = `${shape.fontSize}px ${shape.fontFamily || 'Arial'}`;
+                    const textWidth = ctx.measureText(shape.text).width;
+                    const textHeight = shape.fontSize;
+                    const shapeLeft = shape.startX;
+                    const shapeRight = shape.startX + textWidth;
+                    const shapeTop = shape.startY - textHeight;
+                    const shapeBottom = shape.startY;
+
+                    return (
+                        (shapeLeft <= right && shapeRight >= left) &&
+                        (shapeTop <= bottom && shapeBottom >= top)
+                    );
+                }
+            }
         }
 
         return false;
@@ -875,6 +968,10 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     const showSaveModal = () => {
+        if (!isSignedIn) {
+            showModal("Please connect your NEAR wallet to save the canvas.");
+            return;
+        }
         setIsSaveModalOpen(true);
     };
 
@@ -931,6 +1028,10 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     const handleSaveCanvasState = (fileName: string) => {
+        if (!isSignedIn) {
+            showModal("Please connect your NEAR wallet to save the canvas.");
+            return;
+        }
         if (!fileName) {
             showModal("Please enter a file name.");
             return;
@@ -1150,6 +1251,9 @@ const InfiniteCanvas2: React.FC = () => {
     useHotkeys('left', () => handleMoveSelected(-1, 0), [shapes]);
     useHotkeys('right', () => handleMoveSelected(1, 0), [shapes]);
 
+    // Add this new hotkey handler for the text tool
+    useHotkeys('t', () => handleToolSelect('text'), [handleToolSelect]);
+
     // Update the existing useEffect hook for keyboard events
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -1309,6 +1413,10 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     const handleLoadCanvasState = () => {
+        if (!isSignedIn) {
+            showModal("Please connect your NEAR wallet to load a canvas.");
+            return;
+        }
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.nex';
@@ -1366,6 +1474,55 @@ const InfiniteCanvas2: React.FC = () => {
         setIsDarkMode(!isDarkMode);
     }, [isDarkMode]);
 
+    const handleTextInput = (text: string) => {
+        if (textInputPosition && text.trim() !== '') {
+            const newShape: Shape = {
+                id: uuidv4(),
+                tool: 'text',
+                startX: textInputPosition.x,
+                startY: textInputPosition.y,
+                text: text,
+                color: '#000000',
+                fontSize: 16,
+                fontFamily: 'Arial',
+                isVisible: true,
+                isSelected: false,
+                zIndex: shapes.length,
+                strokeWidth: 1,
+            };
+            setShapes(prevShapes => [...prevShapes, newShape]);
+            setIsAddingText(false);
+            setTextInputPosition(null);
+        }
+    };
+
+    const renderTextInput = () => {
+        if (isAddingText && textInputPosition) {
+            const inputStyle = {
+                position: 'absolute' as 'absolute',
+                left: `${textInputPosition.x * zoom + panOffset.x}px`,
+                top: `${textInputPosition.y * zoom + panOffset.y}px`,
+                zIndex: 1000,
+            };
+
+            return (
+                <input
+                    type="text"
+                    autoFocus
+                    style={{...inputStyle, backgroundColor: 'transparent'}}
+                    onBlur={(e) => handleTextInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            handleTextInput(e.currentTarget.value);
+                        }
+                    }}
+                    className="border border-gray-300 rounded p-1 text-black dark:text-white focus:border-gray-300"
+                />
+            );
+        }
+        return null;
+    };
+
     return (
         <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
             <TopMenuBar 
@@ -1376,6 +1533,7 @@ const InfiniteCanvas2: React.FC = () => {
                 onClearCanvas={handleClearCanvas}
                 onSaveCanvasState={showSaveModal}
                 onLoadCanvasState={handleLoadCanvasState}
+                isSignedIn={isSignedIn}
             />
 
             {/* Floating NEAR Wallet Button */}
@@ -1538,6 +1696,8 @@ const InfiniteCanvas2: React.FC = () => {
                 onSave={handleSaveCanvasState}
                 isDarkMode={isDarkMode}
             />
+
+            {renderTextInput()}
         </div>
     );
 };

@@ -3,8 +3,7 @@
  */
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Sun, Moon, Download, Upload, Trash2, Save, FolderOpen } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sun, Moon, Download, Upload, Save, FolderOpen, Trash2, CreditCard } from 'lucide-react';
 
 interface TopMenuBarProps {
     isDarkMode: boolean;
@@ -14,6 +13,7 @@ interface TopMenuBarProps {
     onClearCanvas: () => void;
     onSaveCanvasState: () => void;
     onLoadCanvasState: () => void;
+    isSignedIn: boolean;
 }
 
 const TopMenuBar: React.FC<TopMenuBarProps> = ({
@@ -23,78 +23,30 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
     onMint,
     onClearCanvas,
     onSaveCanvasState,
-    onLoadCanvasState
+    onLoadCanvasState,
+    isSignedIn
 }) => {
     return (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-            <div className={`flex items-center space-x-2 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-full shadow-md px-4 py-2`}>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={onThemeToggle}>
-                                {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Toggle Theme (Ctrl+D)</p>
-                        </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={onExport}>
-                                <Download className="h-5 w-5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Export (Ctrl+E)</p>
-                        </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={onMint}>
-                                <Upload className="h-5 w-5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Mint NFT (Ctrl+M)</p>
-                        </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={onClearCanvas}>
-                                <Trash2 className="h-5 w-5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Clear Canvas (Ctrl+N)</p>
-                        </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={onSaveCanvasState}>
-                                <Save className="h-5 w-5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Save Canvas (Ctrl+S)</p>
-                        </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={onLoadCanvasState}>
-                                <FolderOpen className="h-5 w-5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Load Canvas (Ctrl+O)</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+            <div className={`flex space-x-2 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} p-2 rounded-lg shadow-lg`}>
+                <Button variant="ghost" size="icon" onClick={onThemeToggle} title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+                    {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onExport} title="Export (Ctrl+E)">
+                    <Download className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onMint} title="Mint NFT (Ctrl+M)">
+                    <CreditCard className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onClearCanvas} title="Clear Canvas (Ctrl+N)">
+                    <Trash2 className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onSaveCanvasState} disabled={!isSignedIn} title={isSignedIn ? "Save Canvas (Ctrl+S)" : "Connect wallet to save"}>
+                    <Save className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onLoadCanvasState} disabled={!isSignedIn} title={isSignedIn ? "Load Canvas (Ctrl+O)" : "Connect wallet to load"}>
+                    <FolderOpen className="h-5 w-5" />
+                </Button>
             </div>
         </div>
     );
