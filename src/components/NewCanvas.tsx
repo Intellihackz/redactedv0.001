@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Brush, Square, Circle, ChevronUp, ChevronDown, Sun, Moon, File, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X } from 'lucide-react';
+import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
 import { wallet } from '@/utils/near-wallet';
@@ -721,22 +721,22 @@ const InfiniteCanvas2: React.FC = () => {
         }
     };
 
-    const drawResizeHandles = (ctx: CanvasRenderingContext2D, shape: Shape) => {
-        if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
-            const handleSize = 8;
-            const handles = [
-                { x: shape.startX!, y: shape.startY! },
-                { x: shape.startX! + shape.width!, y: shape.startY! },
-                { x: shape.startX!, y: shape.startY! + shape.height! },
-                { x: shape.startX! + shape.width!, y: shape.startY! + shape.height! },
-            ];
+    // const drawResizeHandles = (ctx: CanvasRenderingContext2D, shape: Shape) => {
+    //     if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
+    //         const handleSize = 8;
+    //         const handles = [
+    //             { x: shape.startX!, y: shape.startY! },
+    //             { x: shape.startX! + shape.width!, y: shape.startY! },
+    //             { x: shape.startX!, y: shape.startY! + shape.height! },
+    //             { x: shape.startX! + shape.width!, y: shape.startY! + shape.height! },
+    //         ];
 
-            ctx.fillStyle = '#00FFFF';
-            handles.forEach(handle => {
-                ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
-            });
-        }
-    };
+    //         ctx.fillStyle = '#00FFFF';
+    //         handles.forEach(handle => {
+    //             ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
+    //         });
+    //     }
+    // };
 
     const isPointInResizeHandle = (x: number, y: number, shape: Shape): string | null => {
         if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
