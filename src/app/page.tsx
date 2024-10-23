@@ -1,21 +1,6 @@
-'use client'
-
-import { useEffect, useState } from 'react';
-import InfiniteCanvas2 from '@/components/NewCanvas';
-import { wallet } from '@/utils/near-wallet';
+import { LandingPage } from '@/components/landing-page';
 
 export default function Home() {
-  const [walletReady, setWalletReady] = useState(false);
-
-  useEffect(() => {
-    wallet.startUp().then(() => {
-      setWalletReady(true);
-    });
-  }, []);
-
-  if (!walletReady) {
-    return <div>Loading...</div>;
-  }
-
-  return <InfiniteCanvas2 />;
+  
+  return <LandingPage />;
 }

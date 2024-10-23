@@ -1,30 +1,49 @@
-import { connect, keyStores, WalletConnection, ConnectedWalletAccount } from 'near-api-js';
+import { ConnectedWalletAccount } from 'near-api-js';
 
 const CONTRACT_NAME = process.env.NEXT_PUBLIC_CONTRACT_NAME || 'nft.examples.testnet';
 
-const connectionConfig = {
+let nearApi: any = null;
+
+const initNearApi = async () => {
+  if (typeof window !== 'undefined' && !nearApi) {
+    nearApi = await import('near-api-js');
+  }
+};
+
+const getConnectionConfig = () => ({
   networkId: "testnet",
-  keyStore: new keyStores.BrowserLocalStorageKeyStore(),
+  keyStore: typeof window !== 'undefined' && nearApi ? new nearApi.keyStores.BrowserLocalStorageKeyStore() : undefined,
   nodeUrl: "https://rpc.testnet.near.org",
   walletUrl: "https://testnet.mynearwallet.com/",
   helperUrl: "https://helper.testnet.near.org",
   explorerUrl: "https://testnet.nearblocks.io",
-};
+});
 
 export class Wallet {
-  private walletConnection: WalletConnection | null = null;
+  private walletConnection: any = null;
 
   async startUp(): Promise<boolean> {
-    const nearConnection = await connect(connectionConfig);
-    this.walletConnection = new WalletConnection(nearConnection, CONTRACT_NAME);
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    await initNearApi();
+    if (!nearApi) {
+      console.error('Failed to initialize nearApi');
+      return false;
+    }
+    const nearConnection = await nearApi.connect(getConnectionConfig());
+    this.walletConnection = new nearApi.WalletConnection(nearConnection, CONTRACT_NAME);
     return this.isSignedIn();
   }
 
   signIn() {
-    this.walletConnection?.requestSignIn({
+    if (typeof window === 'undefined' || !this.walletConnection) {
+      return;
+    }
+    this.walletConnection.requestSignIn({
         contractId: "nft.examples.testnet",
-        methodNames: [], // Add methods you want to call as an array here
-        successUrl: `${window.location.origin}`, // optional redirect URL on success
+        methodNames: [],
+        successUrl: `${window.location.origin}`,
         failureUrl: `${window.location.origin}`,
         keyType: 'ed25519'
     });
@@ -33,7 +52,6 @@ export class Wallet {
   signOut() {
     if (this.walletConnection) {
       this.walletConnection.signOut();
-      // Instead of reloading the page, we'll return a promise that resolves when sign out is complete
       return Promise.resolve();
     }
     return Promise.reject("Wallet connection not established");
@@ -74,4 +92,4 @@ export class Wallet {
   }
 }
 
-export const wallet = new Wallet();
+export const wallet = typeof window !== 'undefined' ? new Wallet() : null;

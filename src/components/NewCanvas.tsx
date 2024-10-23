@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import ToolBar from './ToolBar';
 import TopMenuBar from './TopMenuBar';
 import { debounce } from 'lodash';
+import dynamic from 'next/dynamic';
 
 interface Shape {
     id: string;
@@ -100,13 +101,18 @@ const InfiniteCanvas2: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        wallet.startUp().then((signedIn) => {
-            setIsSignedIn(signedIn);
-            if (signedIn) {
-                setAccountId(wallet.getAccountId());
-                showModal(`Welcome back, ${wallet.getAccountId()}!`);
+        const initWallet = async () => {
+            if (wallet) {
+                const signedIn = await wallet.startUp();
+                setIsSignedIn(signedIn);
+                if (signedIn) {
+                    setAccountId(wallet.getAccountId());
+                    showModal(`Welcome back, ${wallet.getAccountId()}!`);
+                }
             }
-        });
+        };
+
+        initWallet();
     }, []);
 
     // Add these new functions
@@ -773,18 +779,20 @@ const InfiniteCanvas2: React.FC = () => {
 
     const handleSignIn = () => {
         console.log("Signing in");  
-        wallet.signIn();
+        wallet?.signIn();
     };
 
     const handleSignOut = () => {
-        wallet.signOut().then(() => {
-            setIsSignedIn(false);
-            setAccountId('');
-            showModal("You have been signed out successfully.");
-        }).catch((error) => {
-            console.error("Sign out failed:", error);
-            showModal("Sign out failed. Please try again.");
-        });
+        if (wallet) {
+            wallet.signOut().then(() => {
+                setIsSignedIn(false);
+                setAccountId('');
+                showModal("You have been signed out successfully.");
+            }).catch((error: Error) => {
+                console.error("Sign out failed:", error);
+                showModal("Sign out failed. Please try again.");
+            });
+        }
     };
 
     const isShapeInSelection = (shape: Shape): boolean => {
@@ -944,12 +952,12 @@ const InfiniteCanvas2: React.FC = () => {
             };
 
             // Call the mintNFT method from the wallet
-            const result = await wallet.callMethod({
+            const result = await wallet?.callMethod({
                 method: 'nft_mint',
                 args: {
                     token_id: tokenId,
                     metadata: metadata,
-                    receiver_id: wallet.getAccountId(),
+                    receiver_id: wallet?.getAccountId(),
                 },
                 deposit: '139890000000000000000000',
             });
@@ -1388,4 +1396,6 @@ const InfiniteCanvas2: React.FC = () => {
     );
 };
 
-export default InfiniteCanvas2;
+const NewCanvas = dynamic(() => Promise.resolve(InfiniteCanvas2), { ssr: false });
+
+export default NewCanvas;
