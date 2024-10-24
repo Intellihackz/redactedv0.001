@@ -28,23 +28,23 @@ const TopMenuBar: React.FC<TopMenuBarProps> = ({
 }) => {
     return (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-            <div className={`flex space-x-2 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} p-2 rounded-lg shadow-lg`}>
-                <Button variant="ghost" size="icon" onClick={onThemeToggle} title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+            <div className={`flex space-x-2 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} p-2 rounded-[30px] shadow-lg`}>
+                <Button variant="ghost"  className='rounded-[20px]' size="icon" onClick={onThemeToggle} title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
                     {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onExport} title="Export (Ctrl+E)">
+                <Button variant="ghost" className='rounded-[20px]' size="icon" onClick={onExport} title="Export (Ctrl+E)">
                     <Download className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onMint} title="Mint NFT (Ctrl+M)">
+                <Button variant="ghost"  className='rounded-[20px]'size="icon" onClick={onMint} title="Mint NFT (Ctrl+M)">
                     <CreditCard className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onClearCanvas} title="Clear Canvas (Ctrl+N)">
+                <Button variant="ghost" className='rounded-[20px]' size="icon" onClick={onClearCanvas} title="Clear Canvas (Ctrl+N)">
                     <Trash2 className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onSaveCanvasState} disabled={!isSignedIn} title={isSignedIn ? "Save Canvas (Ctrl+S)" : "Connect wallet to save"}>
+                <Button variant="ghost" className='rounded-[20px]' size="icon" onClick={onSaveCanvasState} disabled={!isSignedIn} title={isSignedIn ? "Save Canvas (Ctrl+S)" : "Connect wallet to save"}>
                     <Save className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onLoadCanvasState} disabled={!isSignedIn} title={isSignedIn ? "Load Canvas (Ctrl+O)" : "Connect wallet to load"}>
+                <Button variant="ghost" className='rounded-[20px]' size="icon" onClick={onLoadCanvasState} disabled={!isSignedIn} title={isSignedIn ? "Load Canvas (Ctrl+O)" : "Connect wallet to load"}>
                     <FolderOpen className="h-5 w-5" />
                 </Button>
             </div>

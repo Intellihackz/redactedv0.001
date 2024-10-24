@@ -14,7 +14,7 @@ export function LandingPage() {
       <header className="container mx-auto px-4 py-6 relative z-10">
         <nav className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
-           <img src="/icon(1).svg" alt="Nexus" width={50} height={50} />
+            <img src="/icon(1).svg" alt="Nexus" width={50} height={50} />
             <span className="text-2xl font-bold">Nexus</span>
           </div>
           <div className="hidden md:flex space-x-6">
@@ -36,7 +36,7 @@ export function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          Infinite Canvas, Infinite Possibilities
+          Your NFT Studio
         </motion.h1>
         <motion.p
           className="text-xl md:text-2xl mb-10"
@@ -52,7 +52,8 @@ export function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          Start Creating
+          <Link href="/draw">Start Creating</Link>
+
         </motion.button>
       </section>
 
@@ -123,7 +124,7 @@ export function LandingPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold mb-8">Ready to Turn Your Creativity into NFTs?</h2>
           <button className="bg-white text-[#4A0E4E] text-lg px-8 py-4 rounded-full hover:bg-[#E6E6FA] transition-colors">
-            Start Your Endless Journey
+            <Link href={"/draw"}> Start your design journey</Link>
           </button>
         </div>
       </section>

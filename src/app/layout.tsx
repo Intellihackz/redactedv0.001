@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Nexus - you own your works",
+  title: "Nexus - your Nft studio",
   description: "Built on Near Protocol",
 };
 
