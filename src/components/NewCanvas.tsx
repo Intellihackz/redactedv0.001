@@ -475,6 +475,12 @@ const InfiniteCanvas2: React.FC = () => {
         }
     };
 
+    const handleTextUpdate = (newText: string) => {
+        if (selectedShape && selectedShape.tool === 'text') {
+            handleSelectedShapePropertyChange('text', newText);
+        }
+    };
+
     const handleSelectedShapePropertyChange = (property: keyof Shape, value: Shape[keyof Shape]) => {
         if (selectedShape) {
             const updatedShapes = shapes.map(shape =>
@@ -493,6 +499,13 @@ const InfiniteCanvas2: React.FC = () => {
                     updatedShapes.forEach(shape => drawShape(ctx, shape));
                 }
             }
+
+            // Update selectedShapes if the modified shape is in the selection
+            setSelectedShapes(prevSelectedShapes => 
+                prevSelectedShapes.map(s => 
+                    s.id === selectedShape.id ? { ...s, [property]: value } : s
+                )
+            );
         }
     };
 
@@ -771,6 +784,15 @@ const InfiniteCanvas2: React.FC = () => {
                     return (
                         <>
                             <div className="mb-2">
+                                <label className="text-sm font-medium">Text Content</label>
+                                <Input
+                                    type="text"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
+                                    value={selectedShape.text || ''}
+                                    onChange={(e) => handleTextUpdate(e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
                                 <label className="text-sm font-medium">Text Color</label>
                                 <input
                                     type="color"
@@ -781,9 +803,9 @@ const InfiniteCanvas2: React.FC = () => {
                             </div>
                             <div className="mb-2">
                                 <label className="text-sm font-medium">Font Size</label>
-                                <input
+                                <Input
                                     type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
                                     min="1"
                                     max="100"
                                     value={selectedShape.fontSize}
@@ -792,9 +814,9 @@ const InfiniteCanvas2: React.FC = () => {
                             </div>
                             <div className="mb-2">
                                 <label className="text-sm font-medium">Font Family</label>
-                                <input
+                                <Input
                                     type="text"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
                                     value={selectedShape.fontFamily}
                                     onChange={(e) => handleSelectedShapePropertyChange('fontFamily', e.target.value)}
                                 />
