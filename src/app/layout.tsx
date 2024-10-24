@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     siteName: "Nexus NFT Studio",
     images: [
       {
-        url: "https://app-nexus.vercel.app/og-image.jpg", 
+        url: "https://i.ibb.co/5RXRKgy/brandbird-6.png", 
         width: 1200,
         height: 630,
         alt: "Nexus - NFT Design Studio",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "Nexus - NFT Design Studio",
     description: "Create, customize, and mint unique NFTs with Nexus, the decentralized NFT design studio",
     creator: "@zephyrdev_",
-    images: ["https://app-nexus.vercel.app/twitter-image.jpg"], 
+    images: ["https://i.ibb.co/5RXRKgy/brandbird-6.png"], 
   },
   robots: {
     index: true,
