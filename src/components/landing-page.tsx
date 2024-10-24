@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Infinity, Zap, Share2 } from 'lucide-react'
+import { Infinity, Zap, Share2, Shield } from 'lucide-react'
 import Link from 'next/link'
 
 export function LandingPage() {
@@ -73,13 +73,24 @@ export function LandingPage() {
               description="Turn your artwork into NFTs with just a few clicks, powered by NEAR blockchain."
             />
             <FeatureCard
-              icon={<Share2 className="h-12 w-12 text-[#008080]" />}
-              title="Share & Sell"
-              description="Showcase your NFTs to the world and sell them on our integrated marketplace."
+              icon={<Shield className="h-12 w-12 text-[#008080]" />}
+              title="Secure Ownership"
+              description="Your NFTs are securely stored on the blockchain, ensuring true ownership of your digital creations."
             />
           </div>
         </div>
       </section>
+      {/* <section id="how-it-works" className="py-20 relative z-10">
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-12">How It Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <StepCard number={1} title="Draw" description="Create your masterpiece on our infinite canvas" />
+            <StepCard number={2} title="Customize" description="Add details and metadata to your NFT" />
+            <StepCard number={3} title="Mint" description="Turn your art into an NFT with one click" />
+            <StepCard number={4} title="Own" description="Securely store and showcase your digital creation" />
+          </div>
+        </div>
+      </section> */}
 
       {/* How It Works Section */}
       <section id="how-it-works" className="py-20 relative z-10">
@@ -89,35 +100,10 @@ export function LandingPage() {
             <StepCard number={1} title="Draw" description="Create your masterpiece on our infinite canvas" />
             <StepCard number={2} title="Customize" description="Add details and metadata to your NFT" />
             <StepCard number={3} title="Mint" description="Turn your art into an NFT with one click" />
-            <StepCard number={4} title="Own & Share" description="Showcase and sell your digital creation" />
+            <StepCard number={4} title="Own" description="Securely store and showcase your digital creation" />
           </div>
         </div>
       </section>
-
-      {/* Showcase Section */}
-      {/* <section className="py-20 relative z-10">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12">NFT Showcase</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => (
-              <motion.div 
-                key={i} 
-                className="aspect-square bg-[#1E1E1E] rounded-lg overflow-hidden"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Image 
-                  src={`/placeholder.svg?height=300&width=300&text=NFT ${i + 1}`} 
-                  alt={`NFT ${i + 1}`} 
-                  width={300}
-                  height={300}
-                  className="w-full h-full object-cover" 
-                />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section> */}
 
       {/* Call-to-Action Section */}
       <section className="py-20 bg-gradient-to-r from-[#4A0E4E] to-[#008080] relative z-10">
