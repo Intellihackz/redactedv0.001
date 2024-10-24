@@ -344,7 +344,7 @@ const InfiniteCanvas2: React.FC = () => {
                     : shape
             ));
 
-            setSelectedShapes(prevSelected => prevSelected.map(shape => ({
+            setSelectedShapes(prev => prev.map(shape => ({
                 ...shape,
                 startX: (shape.startX || 0) + dx,
                 startY: (shape.startY || 0) + dy,
@@ -483,12 +483,28 @@ const InfiniteCanvas2: React.FC = () => {
 
     const handleSelectedShapePropertyChange = (property: keyof Shape, value: Shape[keyof Shape]) => {
         if (selectedShape) {
+            let updatedShape = { ...selectedShape, [property]: value };
+
+            // Special handling for width and height changes
+            if (property === 'width' || property === 'height') {
+                const newValue = value as number;
+                if (newValue < 1) return; // Prevent negative or zero dimensions
+
+                if (selectedShape.startX !== undefined && selectedShape.startY !== undefined) {
+                    if (property === 'width') {
+                        updatedShape = { ...updatedShape, width: newValue };
+                    } else {
+                        updatedShape = { ...updatedShape, height: newValue };
+                    }
+                }
+            }
+
             const updatedShapes = shapes.map(shape =>
-                shape.id === selectedShape.id ? { ...shape, [property]: value } : shape
+                shape.id === selectedShape.id ? updatedShape : shape
             );
+
             setShapes(updatedShapes);
-            const updatedSelectedShape = updatedShapes.find(s => s.id === selectedShape.id);
-            setSelectedShape(updatedSelectedShape || null);
+            setSelectedShape(updatedShape);
             
             // Force a re-render of the canvas
             const canvas = canvasRef.current;
@@ -503,7 +519,7 @@ const InfiniteCanvas2: React.FC = () => {
             // Update selectedShapes if the modified shape is in the selection
             setSelectedShapes(prevSelectedShapes => 
                 prevSelectedShapes.map(s => 
-                    s.id === selectedShape.id ? { ...s, [property]: value } : s
+                    s.id === selectedShape.id ? updatedShape : s
                 )
             );
         }
@@ -688,9 +704,9 @@ const InfiniteCanvas2: React.FC = () => {
                             </div>
                             <div className="mb-2">
                                 <label className="text-sm font-medium">Border Width</label>
-                                <input
+                                <Input
                                     type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="20"
                                     value={selectedShape.strokeWidth}
@@ -698,10 +714,30 @@ const InfiniteCanvas2: React.FC = () => {
                                 />
                             </div>
                             <div className="mb-2">
-                                <label className="text-sm font-medium">Border Radius</label>
-                                <input
+                                <label className="text-sm font-medium">Width</label>
+                                <Input
                                     type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.width}
+                                    onChange={(e) => handleSelectedShapePropertyChange('width', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Height</label>
+                                <Input
+                                    type="number"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.height}
+                                    onChange={(e) => handleSelectedShapePropertyChange('height', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Radius</label>
+                                <Input
+                                    type="number"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="50"
                                     value={selectedShape.rectangleBorderRadius || 0}
@@ -710,9 +746,9 @@ const InfiniteCanvas2: React.FC = () => {
                             </div>
                             <div className="mb-2">
                                 <label className="text-sm font-medium">Opacity (%)</label>
-                                <input
+                                <Input
                                     type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="100"
                                     value={selectedShape.rectangleOpacity || 100}
@@ -744,9 +780,9 @@ const InfiniteCanvas2: React.FC = () => {
                             </div>
                             <div className="mb-2">
                                 <label className="text-sm font-medium">Border Width</label>
-                                <input
+                                <Input
                                     type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="20"
                                     value={selectedShape.strokeWidth}
@@ -754,10 +790,30 @@ const InfiniteCanvas2: React.FC = () => {
                                 />
                             </div>
                             <div className="mb-2">
-                                <label className="text-sm font-medium">Opacity (%)</label>
-                                <input
+                                <label className="text-sm font-medium">Width</label>
+                                <Input
                                     type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.width}
+                                    onChange={(e) => handleSelectedShapePropertyChange('width', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Height</label>
+                                <Input
+                                    type="number"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.height}
+                                    onChange={(e) => handleSelectedShapePropertyChange('height', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Opacity (%)</label>
+                                <Input
+                                    type="number"
+                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
                                     min="0"
                                     max="100"
                                     value={selectedShape.circleOpacity || 100}
