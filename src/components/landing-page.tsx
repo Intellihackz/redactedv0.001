@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Infinity, Zap, Share2, Shield } from 'lucide-react'
+import { Infinity, Zap, Shield } from 'lucide-react'
 import Link from 'next/link'
 
 export function LandingPage() {
