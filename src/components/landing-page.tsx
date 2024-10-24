@@ -14,7 +14,7 @@ export function LandingPage() {
       <header className="container mx-auto px-4 py-6 relative z-10">
         <nav className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <img src="/icon(1).svg" alt="Nexus" width={50} height={50} />
+            <img src="/logo.svg" alt="Nexus" width={50} height={50} />
             <span className="text-2xl font-bold">Nexus</span>
           </div>
           <div className="hidden md:flex space-x-6">
