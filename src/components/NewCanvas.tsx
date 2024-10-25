@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen, Type, PenTool, Pencil, Edit3, Hexagon, Triangle, Octagon, Disc, Aperture } from 'lucide-react';
+import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen, Type, PenTool, Pencil, Edit3, Hexagon, Triangle, Octagon, Disc, Aperture, Image as ImageIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
 import { wallet } from '@/utils/near-wallet';
@@ -47,6 +47,7 @@ interface Shape {
     fontFamily?: string;
     subTool?: string;
     name?: string;
+    imageUrl?: string;
 }
 
 const InfiniteCanvas2: React.FC = () => {
@@ -103,6 +104,7 @@ const InfiniteCanvas2: React.FC = () => {
         { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas (C)', hotkey: 'C' },
         { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas (E)', hotkey: 'E' },
         { id: 'text', icon: Type, tooltip: 'Add text to the canvas (T)', hotkey: 'T' },
+        { id: 'image', icon: ImageIcon, tooltip: 'Add image to the canvas (I)', hotkey: 'I' },
     ];
 
     const subToolIcons = {
@@ -211,10 +213,11 @@ const InfiniteCanvas2: React.FC = () => {
                         return shape.points.some(point => {
                             return x >= point.x && x <= point.x + shape.strokeWidth && y >= point.y && y <= point.y + shape.strokeWidth;
                         });
-                    } else if (shape.tool === 'rectangle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
-                        return x >= shape.startX && x <= shape.startX + shape.width && y >= shape.startY && y <= shape.startY + shape.height;
-                    } else if (shape.tool === 'circle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
-                        return Math.sqrt((x - (shape.startX + shape.width / 2)) ** 2 + (y - (shape.startY + shape.height / 2)) ** 2) <= shape.width / 2;
+                    } else if ((shape.tool === 'rectangle' || shape.tool === 'circle' || shape.tool === 'image') && 
+                               shape.startX !== undefined && shape.startY !== undefined && 
+                               shape.width !== undefined && shape.height !== undefined) {
+                        return x >= shape.startX && x <= shape.startX + shape.width && 
+                               y >= shape.startY && y <= shape.startY + shape.height;
                     } else if (shape.tool === 'text' && shape.startX !== undefined && shape.startY !== undefined && shape.fontSize !== undefined) {
                         // Check if the click is within the text bounding box
                         const canvas = canvasRef.current;
@@ -641,6 +644,19 @@ const InfiniteCanvas2: React.FC = () => {
                 ctx.strokeRect(shape.startX - 2, shape.startY - textHeight - 2, textWidth + 4, textHeight + 4);
                 ctx.setLineDash([]);
             }
+        } else if (shape.tool === 'image' && shape.imageUrl && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
+            const img = new Image();
+            img.src = shape.imageUrl;
+            ctx.drawImage(img, shape.startX, shape.startY, shape.width, shape.height);
+            
+            // Draw selection box if selected and not exporting
+            if (!isExporting && selectedShapes.find(s => s.id === shape.id)) {
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(shape.startX - 5, shape.startY - 5, shape.width + 10, shape.height + 10);
+                ctx.setLineDash([]);
+            }
         }
 
         // Only draw selection highlight if not exporting
@@ -685,11 +701,21 @@ const InfiniteCanvas2: React.FC = () => {
                 // Draw background dots
                 drawBackgroundDots(ctx, canvas.width / zoom, canvas.height / zoom);
 
-                shapes.forEach(shape => {
-                    drawShape(ctx, shape);
-                });
+                // Preload all images
+                const imagePromises = shapes
+                    .filter(shape => shape.tool === 'image' && shape.imageUrl)
+                    .map(shape => new Promise((resolve, reject) => {
+                            const img = new Image();
+                        img.onload = resolve;
+                        img.onerror = reject;
+                        img.src = shape.imageUrl!;
+                    }));
 
+                Promise.all(imagePromises).then(() => {
+                    // Draw all shapes after images are loaded
+                    shapes.forEach(shape => drawShape(ctx, shape));
                 ctx.restore();
+                });
             }
         }
     }, [shapes, selectedShapes, selectedShape, panOffset, zoom, isDarkMode]);
@@ -1095,6 +1121,12 @@ const InfiniteCanvas2: React.FC = () => {
     // Add this new hotkey handler for the text tool
     useHotkeys('t', () => handleToolSelect('text'), [handleToolSelect]);
 
+    const handleSelectAll = () => {
+        const allShapes = shapes.map(shape => ({ ...shape, isSelected: true }));
+        setShapes(allShapes);
+        setSelectedShapes(allShapes);
+    };
+
     // Update the existing useEffect hook for keyboard events
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -1108,13 +1140,17 @@ const InfiniteCanvas2: React.FC = () => {
                         e.preventDefault();
                         handlePaste();
                         break;
+                    case 'a':
+                        e.preventDefault();
+                        handleSelectAll();
+                        break;
                 }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleCopy, handlePaste]);
+    }, [handleCopy, handlePaste, handleSelectAll]);
 
     const handleLayerNameChange = (id: string, newName: string) => {
         setShapes(shapes.map(shape =>
@@ -1132,10 +1168,13 @@ const InfiniteCanvas2: React.FC = () => {
         const [reorderedItem] = items.splice(result.source.index, 1);
         items.splice(result.destination.index, 0, reorderedItem);
 
+        // Reverse the order of items because we display layers from top to bottom
+        const reversedItems = items.reverse();
+
         // Update zIndex for all shapes
-        const updatedShapes = items.map((shape, index) => ({
+        const updatedShapes = reversedItems.map((shape, index) => ({
             ...shape,
-            zIndex: shapes.length - index
+            zIndex: index
         }));
 
         setShapes(updatedShapes);
@@ -1269,6 +1308,31 @@ const InfiniteCanvas2: React.FC = () => {
                             </div>
                         </>
                     );
+                case 'image':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Width</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.width}
+                                    onChange={(e) => handleSelectedShapePropertyChange('width', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Height</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.height}
+                                    onChange={(e) => handleSelectedShapePropertyChange('height', parseInt(e.target.value))}
+                                />
+                            </div>
+                        </>
+                    );
                 default:
                     return null;
             }
@@ -1306,8 +1370,17 @@ const InfiniteCanvas2: React.FC = () => {
                                 <Clipboard className="w-4 h-4 mr-1" />
                                 Paste
                             </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleSelectAll}
+                                title="Select All (Ctrl+A)"
+                            >
+                                <MousePointer2 className="w-4 h-4 mr-1" />
+                                Select All
+                            </Button>
                         </div>
-                        {shapes.slice().reverse().map((shape, index) => (
+                        {shapes.map((shape, index) => (
                             <Draggable key={shape.id} draggableId={shape.id} index={index}>
                                 {(provided) => (
                                     <div
@@ -1561,7 +1634,6 @@ const InfiniteCanvas2: React.FC = () => {
         return null;
     };
 
-    // Add this function near the other utility functions
     const isPointInResizeHandle = (x: number, y: number, shape: Shape): string | null => {
         if (shape.startX === undefined || shape.startY === undefined || shape.width === undefined || shape.height === undefined) {
             return null;
@@ -1584,6 +1656,40 @@ const InfiniteCanvas2: React.FC = () => {
         return null;
     };
 
+    useHotkeys('ctrl+a', (event) => {
+        event.preventDefault();
+        handleSelectAll();
+    }, { enableOnFormTags: true }, [shapes]);
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const newShape: Shape = {
+                        id: uuidv4(),
+                        tool: 'image',
+                        startX: 0,
+                        startY: 0,
+                        width: img.width,
+                        height: img.height,
+                        imageUrl: e.target?.result as string,
+                        isVisible: true,
+                        isSelected: false,
+                        zIndex: shapes.length,
+                        color: '#000000',
+                        strokeWidth: 1,
+                    };
+                    setShapes(prevShapes => [...prevShapes, newShape]);
+                };
+                img.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
             <TopMenuBar
@@ -1597,7 +1703,6 @@ const InfiniteCanvas2: React.FC = () => {
                 isSignedIn={isSignedIn}
             />
 
-            {/* Floating NEAR Wallet Button */}
             <div className="fixed top-4 right-4 z-50">
                 {isSignedIn ? (
                     <div className="flex items-center space-x-2 bg-gray-800 text-white px-3 py-2 rounded-lg shadow-lg">
@@ -1617,12 +1722,11 @@ const InfiniteCanvas2: React.FC = () => {
                 selectedTool={selectedTool}
                 selectedSubTool={selectedSubTool}
                 onToolSelect={handleToolSelect}
+                onImageUpload={handleImageUpload}
                 isDarkMode={isDarkMode}
             />
 
-            {/* Right Sidebar */}
             <div className={`fixed right-4 top-20 bottom-4 w-64 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'} border rounded-lg shadow-lg overflow-hidden z-50 flex flex-col`}>
-                {/* Properties Panel */}
                 <div className="flex-1 border-b overflow-y-auto">
                     <Button
                         variant="ghost"
@@ -1644,7 +1748,6 @@ const InfiniteCanvas2: React.FC = () => {
                     )}
                 </div>
 
-                {/* Layers Panel */}
                 <div className="flex-1 overflow-y-auto">
                     <Button
                         variant="ghost"
@@ -1665,7 +1768,6 @@ const InfiniteCanvas2: React.FC = () => {
                 </div>
             </div>
 
-            {/* Zoom Control UI */}
             <div className={`fixed bottom-4 right-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-2 flex items-center space-x-2 z-50`}>
                 <Button
                     variant="ghost"
@@ -1696,7 +1798,6 @@ const InfiniteCanvas2: React.FC = () => {
                 </Button>
             </div>
 
-            {/* Canvas Area */}
             <canvas
                 key={canvasKey}
                 ref={canvasRef}

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { MousePointer2, Brush, Square, Circle, Eraser, Type, ChevronRight, PenTool, Pencil, Edit3, Hexagon, Triangle, Octagon, Disc, Aperture } from 'lucide-react';
+import { MousePointer2, Brush, Square, Circle, Eraser, Type, ChevronRight, PenTool, Pencil, Edit3, Hexagon, Triangle, Octagon, Disc, Aperture, Image as ImageIcon } from 'lucide-react';
 
 interface SubTool {
     id: string;
@@ -20,6 +20,7 @@ interface ToolBarProps {
     selectedTool: string;
     selectedSubTool: string | null;
     onToolSelect: (toolId: string, subToolId?: string) => void;
+    onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
     isDarkMode: boolean;
 }
 
@@ -79,9 +80,15 @@ const tools: Tool[] = [
         tooltip: 'Add text to the canvas ', 
         hotkey: 'T'
     },
+    { 
+        id: 'image', 
+        icon: ImageIcon, 
+        tooltip: 'Add image to the canvas', 
+        hotkey: 'I'
+    },
 ];
 
-const ToolBar: React.FC<ToolBarProps> = ({ selectedTool, selectedSubTool, onToolSelect, isDarkMode }) => {
+const ToolBar: React.FC<ToolBarProps> = ({ selectedTool, selectedSubTool, onToolSelect, onImageUpload, isDarkMode }) => {
     const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
     const subMenuRef = useRef<HTMLDivElement>(null);
 
@@ -98,9 +105,15 @@ const ToolBar: React.FC<ToolBarProps> = ({ selectedTool, selectedSubTool, onTool
         };
     }, []);
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const handleToolClick = (toolId: string) => {
-        onToolSelect(toolId);
-        setActiveSubMenu(null);
+        if (toolId === 'image') {
+            fileInputRef.current?.click();
+        } else {
+            onToolSelect(toolId);
+            setActiveSubMenu(null);
+        }
     };
 
     const handleToolRightClick = (e: React.MouseEvent, toolId: string) => {
@@ -163,6 +176,13 @@ const ToolBar: React.FC<ToolBarProps> = ({ selectedTool, selectedSubTool, onTool
                     </div>
                 );
             })}
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={onImageUpload}
+                accept="image/*"
+            />
         </div>
     );
 };
