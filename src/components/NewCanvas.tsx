@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen, Type } from 'lucide-react';
+import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen, Type, PenTool, Pencil, Edit3, Hexagon, Triangle, Octagon, Disc, Aperture } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
 import { wallet } from '@/utils/near-wallet';
@@ -44,11 +44,13 @@ interface Shape {
     text?: string;
     fontSize?: number;
     fontFamily?: string;
+    subTool?: string;
 }
 
 const InfiniteCanvas2: React.FC = () => {
     const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
     const [selectedTool, setSelectedTool] = useState<string>('pointer');
+    const [selectedSubTool, setSelectedSubTool] = useState<string | null>(null);
     const [isPropertiesOpen, setIsPropertiesOpen] = useState<boolean>(true);
     const [isLayersOpen, setIsLayersOpen] = useState<boolean>(true);
     const [shapes, setShapes] = useState<Shape[]>([]);
@@ -100,10 +102,26 @@ const InfiniteCanvas2: React.FC = () => {
         { id: 'text', icon: Type, tooltip: 'Add text to the canvas (T)', hotkey: 'T' },
     ];
 
-    const handleToolSelect = useCallback((toolId: string) => {
-        console.log("see")
+    const subToolIcons = {
+        pencil: Pencil,
+        pen: PenTool,
+        marker: Edit3,
+        rectangle: Square,
+        square: Square,
+        parallelogram: Hexagon,
+        trapezoid: Triangle,
+        rhombus: Octagon,
+        circle: Circle,
+        ellipse: Circle,
+        semicircle: Disc,
+        oval: Circle,
+        arc: Aperture,
+    };
+
+    const handleToolSelect = useCallback((toolId: string, subToolId?: string) => {
+        console.log("Selected tool:", toolId, "Sub-tool:", subToolId);
         setSelectedTool(toolId);
-        console.log("Selected tool:", toolId);
+        setSelectedSubTool(subToolId || null);
     }, []);
 
     useEffect(() => {
@@ -264,6 +282,7 @@ const InfiniteCanvas2: React.FC = () => {
                         const newRect: Shape = {
                             id: uuidv4(),
                             tool: 'rectangle',
+                            subTool: selectedSubTool || 'rectangle',
                             startX: x,
                             startY: y,
                             width: 0,
@@ -285,6 +304,7 @@ const InfiniteCanvas2: React.FC = () => {
                         const newCircle: Shape = {
                             id: uuidv4(),
                             tool: 'circle',
+                            subTool: selectedSubTool || 'circle',
                             startX: x,
                             startY: y,
                             width: 0,
@@ -562,26 +582,80 @@ const InfiniteCanvas2: React.FC = () => {
         } else if (shape.tool === 'rectangle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
             ctx.beginPath();
             ctx.globalAlpha = (shape.rectangleOpacity || 100) / 100;
-            if (shape.rectangleBorderRadius) {
-                ctx.roundRect(shape.startX, shape.startY, shape.width, shape.height, shape.rectangleBorderRadius);
-            } else {
-                ctx.rect(shape.startX, shape.startY, shape.width, shape.height);
+            
+            switch (shape.subTool) {
+                case 'rectangle':
+                    ctx.rect(shape.startX, shape.startY, shape.width, shape.height);
+                    break;
+                case 'square':
+                    const size = Math.min(Math.abs(shape.width), Math.abs(shape.height));
+                    ctx.rect(shape.startX, shape.startY, size * Math.sign(shape.width), size * Math.sign(shape.height));
+                    break;
+                case 'parallelogram':
+                    ctx.moveTo(shape.startX + shape.width * 0.2, shape.startY);
+                    ctx.lineTo(shape.startX + shape.width, shape.startY);
+                    ctx.lineTo(shape.startX + shape.width * 0.8, shape.startY + shape.height);
+                    ctx.lineTo(shape.startX, shape.startY + shape.height);
+                    ctx.closePath();
+                    break;
+                case 'trapezoid':
+                    ctx.moveTo(shape.startX + shape.width * 0.2, shape.startY);
+                    ctx.lineTo(shape.startX + shape.width * 0.8, shape.startY);
+                    ctx.lineTo(shape.startX + shape.width, shape.startY + shape.height);
+                    ctx.lineTo(shape.startX, shape.startY + shape.height);
+                    ctx.closePath();
+                    break;
+                case 'rhombus':
+                    ctx.moveTo(shape.startX + shape.width / 2, shape.startY);
+                    ctx.lineTo(shape.startX + shape.width, shape.startY + shape.height / 2);
+                    ctx.lineTo(shape.startX + shape.width / 2, shape.startY + shape.height);
+                    ctx.lineTo(shape.startX, shape.startY + shape.height / 2);
+                    ctx.closePath();
+                    break;
+                default:
+                    ctx.rect(shape.startX, shape.startY, shape.width, shape.height);
             }
+            
             ctx.fill();
             ctx.stroke();
             ctx.globalAlpha = 1;
         } else if (shape.tool === 'circle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
             ctx.beginPath();
             ctx.globalAlpha = (shape.circleOpacity || 100) / 100;
-            ctx.ellipse(
-                shape.startX + shape.width / 2,
-                shape.startY + shape.height / 2,
-                Math.abs(shape.width / 2),
-                Math.abs(shape.height / 2),
-                0,
-                0,
-                2 * Math.PI
-            );
+            
+            const centerX = shape.startX + shape.width / 2;
+            const centerY = shape.startY + shape.height / 2;
+            const radiusX = Math.abs(shape.width / 2);
+            const radiusY = Math.abs(shape.height / 2);
+            
+            switch (shape.subTool) {
+                case 'circle':
+                    ctx.arc(centerX, centerY, Math.min(radiusX, radiusY), 0, 2 * Math.PI);
+                    break;
+                case 'ellipse':
+                    ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                    break;
+                case 'semicircle':
+                    ctx.arc(centerX, centerY, Math.min(radiusX, radiusY), 0, Math.PI);
+                    ctx.lineTo(shape.startX, centerY);
+                    ctx.closePath();
+                    break;
+                case 'oval':
+                    const controlX = radiusX * 0.5522848;
+                    const controlY = radiusY * 0.5522848;
+                    ctx.moveTo(centerX - radiusX, centerY);
+                    ctx.bezierCurveTo(centerX - radiusX, centerY - controlY, centerX - controlX, centerY - radiusY, centerX, centerY - radiusY);
+                    ctx.bezierCurveTo(centerX + controlX, centerY - radiusY, centerX + radiusX, centerY - controlY, centerX + radiusX, centerY);
+                    ctx.bezierCurveTo(centerX + radiusX, centerY + controlY, centerX + controlX, centerY + radiusY, centerX, centerY + radiusY);
+                    ctx.bezierCurveTo(centerX - controlX, centerY + radiusY, centerX - radiusX, centerY + controlY, centerX - radiusX, centerY);
+                    break;
+                case 'arc':
+                    ctx.arc(centerX, centerY, Math.min(radiusX, radiusY), 0, Math.PI * 1.5);
+                    break;
+                default:
+                    ctx.arc(centerX, centerY, Math.min(radiusX, radiusY), 0, 2 * Math.PI);
+            }
+            
             ctx.fill();
             ctx.stroke();
             ctx.globalAlpha = 1;
@@ -890,23 +964,6 @@ const InfiniteCanvas2: React.FC = () => {
             );
         }
     };
-
-    // const drawResizeHandles = (ctx: CanvasRenderingContext2D, shape: Shape) => {
-    //     if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
-    //         const handleSize = 8;
-    //         const handles = [
-    //             { x: shape.startX!, y: shape.startY! },
-    //             { x: shape.startX! + shape.width!, y: shape.startY! },
-    //             { x: shape.startX!, y: shape.startY! + shape.height! },
-    //             { x: shape.startX! + shape.width!, y: shape.startY! + shape.height! },
-    //         ];
-
-    //         ctx.fillStyle = '#00FFFF';
-    //         handles.forEach(handle => {
-    //             ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
-    //         });
-    //     }
-    // };
 
     const isPointInResizeHandle = (x: number, y: number, shape: Shape): string | null => {
         if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
@@ -1632,6 +1689,7 @@ const InfiniteCanvas2: React.FC = () => {
 
             <ToolBar 
                 selectedTool={selectedTool}
+                selectedSubTool={selectedSubTool}
                 onToolSelect={handleToolSelect}
                 isDarkMode={isDarkMode}
             />
