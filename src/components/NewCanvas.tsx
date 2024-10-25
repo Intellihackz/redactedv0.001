@@ -16,6 +16,7 @@ import { saveAs } from 'file-saver';
 import { Input } from "@/components/ui/input";
 import ExportModal from './ExportModal';
 import SaveModal from './SaveModal';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 interface Shape {
     id: string;
@@ -45,6 +46,7 @@ interface Shape {
     fontSize?: number;
     fontFamily?: string;
     subTool?: string;
+    name?: string;
 }
 
 const InfiniteCanvas2: React.FC = () => {
@@ -85,13 +87,14 @@ const InfiniteCanvas2: React.FC = () => {
     const [copiedShapes, setCopiedShapes] = useState<Shape[]>([]);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmModalContent, setConfirmModalContent] = useState<React.ReactNode>(null);
-    const [confirmModalAction, setConfirmModalAction] = useState<() => void>(() => {});
+    const [confirmModalAction, setConfirmModalAction] = useState<() => void>(() => { });
     const [exportFileName, setExportFileName] = useState('');
     const [saveFileName, setSaveFileName] = useState('');
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
     const [isAddingText, setIsAddingText] = useState(false);
     const [textInputPosition, setTextInputPosition] = useState<{ x: number; y: number } | null>(null);
+    const [isEditingLayerName, setIsEditingLayerName] = useState<string | null>(null);
 
     const tools = [
         { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas (P)', hotkey: 'P' },
@@ -221,7 +224,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 const textWidth = ctx.measureText(shape.text || '').width;
                                 const textHeight = shape.fontSize;
                                 return x >= shape.startX && x <= shape.startX + textWidth &&
-                                       y >= shape.startY - textHeight && y <= shape.startY;
+                                    y >= shape.startY - textHeight && y <= shape.startY;
                             }
                         }
                         return false;
@@ -249,7 +252,7 @@ const InfiniteCanvas2: React.FC = () => {
                     setSelectedShapes([]);
                     setSelectedShape(null);
                     setSelectedShapeId(null);
-                    
+
                     // Start multi-select
                     setIsSelecting(true);
                     setSelectionStart({ x, y });
@@ -259,7 +262,7 @@ const InfiniteCanvas2: React.FC = () => {
                 // Deselect all when switching to a drawing tool
                 setSelectedShapes([]);
                 setSelectedShape(null);
-                
+
                 setIsDrawing(true);
 
                 switch (selectedTool) {
@@ -353,7 +356,7 @@ const InfiniteCanvas2: React.FC = () => {
             const dx = x - moveStartX;
             const dy = y - moveStartY;
 
-            setShapes(prevShapes => prevShapes.map(shape => 
+            setShapes(prevShapes => prevShapes.map(shape =>
                 selectedShapes.some(s => s.id === shape.id)
                     ? {
                         ...shape,
@@ -384,9 +387,9 @@ const InfiniteCanvas2: React.FC = () => {
                             return distance > eraserSize / 2;
                         });
                         return newPoints.length > 0 ? { ...shape, points: newPoints } : null;
-                    } else if ((shape.tool === 'rectangle' || shape.tool === 'circle') && 
-                               shape.startX !== undefined && shape.startY !== undefined && 
-                               shape.width !== undefined && shape.height !== undefined) {
+                    } else if ((shape.tool === 'rectangle' || shape.tool === 'circle') &&
+                        shape.startX !== undefined && shape.startY !== undefined &&
+                        shape.width !== undefined && shape.height !== undefined) {
                         // For rectangles and circles, check if eraser touches them
                         const shapeLeft = shape.startX;
                         const shapeRight = shape.startX + shape.width;
@@ -447,7 +450,7 @@ const InfiniteCanvas2: React.FC = () => {
             ...shape,
             isSelected: isMultiSelect ? (shape.id === id ? !shape.isSelected : shape.isSelected) : shape.id === id
         })));
-        
+
         setSelectedShapes(prev => {
             const shape = shapes.find(s => s.id === id);
             if (shape) {
@@ -501,47 +504,11 @@ const InfiniteCanvas2: React.FC = () => {
         }
     };
 
-    const handleSelectedShapePropertyChange = (property: keyof Shape, value: Shape[keyof Shape]) => {
+    const handleSelectedShapePropertyChange = (property: keyof Shape, value: any) => {
         if (selectedShape) {
-            let updatedShape = { ...selectedShape, [property]: value };
-
-            // Special handling for width and height changes
-            if (property === 'width' || property === 'height') {
-                const newValue = value as number;
-                if (newValue < 1) return; // Prevent negative or zero dimensions
-
-                if (selectedShape.startX !== undefined && selectedShape.startY !== undefined) {
-                    if (property === 'width') {
-                        updatedShape = { ...updatedShape, width: newValue };
-                    } else {
-                        updatedShape = { ...updatedShape, height: newValue };
-                    }
-                }
-            }
-
-            const updatedShapes = shapes.map(shape =>
-                shape.id === selectedShape.id ? updatedShape : shape
-            );
-
-            setShapes(updatedShapes);
+            const updatedShape = { ...selectedShape, [property]: value };
+            setShapes(shapes.map(shape => shape.id === selectedShape.id ? updatedShape : shape));
             setSelectedShape(updatedShape);
-            
-            // Force a re-render of the canvas
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    updatedShapes.forEach(shape => drawShape(ctx, shape));
-                }
-            }
-
-            // Update selectedShapes if the modified shape is in the selection
-            setSelectedShapes(prevSelectedShapes => 
-                prevSelectedShapes.map(s => 
-                    s.id === selectedShape.id ? updatedShape : s
-                )
-            );
         }
     };
 
@@ -582,7 +549,7 @@ const InfiniteCanvas2: React.FC = () => {
         } else if (shape.tool === 'rectangle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
             ctx.beginPath();
             ctx.globalAlpha = (shape.rectangleOpacity || 100) / 100;
-            
+
             switch (shape.subTool) {
                 case 'rectangle':
                     ctx.rect(shape.startX, shape.startY, shape.width, shape.height);
@@ -615,19 +582,19 @@ const InfiniteCanvas2: React.FC = () => {
                 default:
                     ctx.rect(shape.startX, shape.startY, shape.width, shape.height);
             }
-            
+
             ctx.fill();
             ctx.stroke();
             ctx.globalAlpha = 1;
         } else if (shape.tool === 'circle' && shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
             ctx.beginPath();
             ctx.globalAlpha = (shape.circleOpacity || 100) / 100;
-            
+
             const centerX = shape.startX + shape.width / 2;
             const centerY = shape.startY + shape.height / 2;
             const radiusX = Math.abs(shape.width / 2);
             const radiusY = Math.abs(shape.height / 2);
-            
+
             switch (shape.subTool) {
                 case 'circle':
                     ctx.arc(centerX, centerY, Math.min(radiusX, radiusY), 0, 2 * Math.PI);
@@ -655,7 +622,7 @@ const InfiniteCanvas2: React.FC = () => {
                 default:
                     ctx.arc(centerX, centerY, Math.min(radiusX, radiusY), 0, 2 * Math.PI);
             }
-            
+
             ctx.fill();
             ctx.stroke();
             ctx.globalAlpha = 1;
@@ -727,278 +694,8 @@ const InfiniteCanvas2: React.FC = () => {
         }
     }, [shapes, selectedShapes, selectedShape, panOffset, zoom, isDarkMode]);
 
-    const renderPropertiesPanel = () => {
-        if (selectedShape) {
-            switch (selectedShape.tool) {
-                case 'brush':
-                    return (
-                        <>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Brush Color</label>
-                                <input
-                                    type="color"
-                                    className="block mt-1 w-full h-8 bg-white dark:bg-gray-700"
-                                    value={selectedShape.color}
-                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Brush Size</label>
-                                <input
-                                    type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    max="50"
-                                    value={selectedShape.strokeWidth}
-                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
-                                />
-                            </div>
-                        </>
-                    );
-                case 'rectangle':
-                    return (
-                        <>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Fill Color</label>
-                                <input
-                                    type="color"
-                                    className="block mt-1 w-full h-8"
-                                    value={selectedShape.color}
-                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Border Color</label>
-                                <input
-                                    type="color"
-                                    className="block mt-1 w-full h-8"
-                                    value={selectedShape.rectangleBorderColor || '#000000'}
-                                    onChange={(e) => handleSelectedShapePropertyChange('rectangleBorderColor', e.target.value)}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Border Width</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="0"
-                                    max="20"
-                                    value={selectedShape.strokeWidth}
-                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Width</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    value={selectedShape.width}
-                                    onChange={(e) => handleSelectedShapePropertyChange('width', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Height</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    value={selectedShape.height}
-                                    onChange={(e) => handleSelectedShapePropertyChange('height', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Border Radius</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="0"
-                                    max="50"
-                                    value={selectedShape.rectangleBorderRadius || 0}
-                                    onChange={(e) => handleSelectedShapePropertyChange('rectangleBorderRadius', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Opacity (%)</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="0"
-                                    max="100"
-                                    value={selectedShape.rectangleOpacity || 100}
-                                    onChange={(e) => handleSelectedShapePropertyChange('rectangleOpacity', parseInt(e.target.value))}
-                                />
-                            </div>
-                        </>
-                    );
-                case 'circle':
-                    return (
-                        <>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Fill Color</label>
-                                <input
-                                    type="color"
-                                    className="block mt-1 w-full h-8"
-                                    value={selectedShape.color}
-                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Border Color</label>
-                                <input
-                                    type="color"
-                                    className="block mt-1 w-full h-8"
-                                    value={selectedShape.circleBorderColor || '#000000'}
-                                    onChange={(e) => handleSelectedShapePropertyChange('circleBorderColor', e.target.value)}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Border Width</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="0"
-                                    max="20"
-                                    value={selectedShape.strokeWidth}
-                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Width</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    value={selectedShape.width}
-                                    onChange={(e) => handleSelectedShapePropertyChange('width', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Height</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    value={selectedShape.height}
-                                    onChange={(e) => handleSelectedShapePropertyChange('height', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Opacity (%)</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="0"
-                                    max="100"
-                                    value={selectedShape.circleOpacity || 100}
-                                    onChange={(e) => handleSelectedShapePropertyChange('circleOpacity', parseInt(e.target.value))}
-                                />
-                            </div>
-                        </>
-                    );
-                case 'eraser':
-                    return (
-                        <div className="mb-2">
-                            <label className="text-sm font-medium">Eraser Size</label>
-                            <input
-                                type="number"
-                                className="block mt-1 w-full"
-                                min="1"
-                                max="100"
-                                value={eraserSize}
-                                onChange={(e) => setEraserSize(parseInt(e.target.value))}
-                            />
-                        </div>
-                    );
-                case 'text':
-                    return (
-                        <>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Text Content</label>
-                                <Input
-                                    type="text"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    value={selectedShape.text || ''}
-                                    onChange={(e) => handleTextUpdate(e.target.value)}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Text Color</label>
-                                <input
-                                    type="color"
-                                    className="block mt-1 w-full h-8"
-                                    value={selectedShape.color}
-                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Font Size</label>
-                                <Input
-                                    type="number"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    max="100"
-                                    value={selectedShape.fontSize}
-                                    onChange={(e) => handleSelectedShapePropertyChange('fontSize', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Font Family</label>
-                                <Input
-                                    type="text"
-                                    className="block mt-1 w-full text-black dark:text-white border border-gray-300 rounded-md p-2"
-                                    value={selectedShape.fontFamily}
-                                    onChange={(e) => handleSelectedShapePropertyChange('fontFamily', e.target.value)}
-                                />
-                            </div>
-                        </>
-                    );
-                default:
-                    return null;
-            }
-        } else {
-            return (
-                <div className="text-sm">
-                    Select a shape to edit its properties.
-                </div>
-            );
-        }
-    };
-
-    const isPointInResizeHandle = (x: number, y: number, shape: Shape): string | null => {
-        if (shape.isSelected && (shape.tool === 'rectangle' || shape.tool === 'circle')) {
-            const handleSize = 8;
-            const handles = [
-                { x: shape.startX!, y: shape.startY!, cursor: 'nwse-resize' },
-                { x: shape.startX! + shape.width!, y: shape.startY!, cursor: 'nesw-resize' },
-                { x: shape.startX!, y: shape.startY! + shape.height!, cursor: 'nesw-resize' },
-                { x: shape.startX! + shape.width!, y: shape.startY! + shape.height!, cursor: 'nwse-resize' },
-            ];
-
-            for (const handle of handles) {
-                if (Math.abs(x - handle.x) <= handleSize / 2 && Math.abs(y - handle.y) <= handleSize / 2) {
-                    return handle.cursor;
-                }
-            }
-        }
-        return null;
-    };
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-            if (isResizing) {
-                canvas.style.cursor = resizeHandle || 'default';
-            } else if (isMoving || (selectedShapes.length > 0 && selectedTool === 'pointer')) {
-                canvas.style.cursor = 'move';
-            } else {
-                canvas.style.cursor = 'default';
-            }
-        }
-    }, [isResizing, isMoving, resizeHandle, selectedShapes.length, selectedTool]);
-
     const handleSignIn = () => {
-        console.log("Signing in");  
+        console.log("Signing in");
         wallet?.signIn();
     };
 
@@ -1024,7 +721,7 @@ const InfiniteCanvas2: React.FC = () => {
         const bottom = Math.max(selectionStart.y, selectionEnd.y);
 
         if (shape.tool === 'brush' && shape.points) {
-            return shape.points.some(point => 
+            return shape.points.some(point =>
                 point.x >= left && point.x <= right && point.y >= top && point.y <= bottom
             );
         } else if (shape.startX !== undefined && shape.startY !== undefined && shape.width !== undefined && shape.height !== undefined) {
@@ -1191,12 +888,12 @@ const InfiniteCanvas2: React.FC = () => {
         setIsMinting(true);
         setModalType('action');
         setModalContent(
-            <MintForm 
-                onMint={mintNFT} 
+            <MintForm
+                onMint={mintNFT}
                 onClose={() => {
                     setIsModalOpen(false);
                     setIsMinting(false);
-                }} 
+                }}
             />
         );
         setIsModalOpen(true);
@@ -1349,20 +1046,26 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     const handleDeleteSelected = () => {
-        const updatedShapes = shapes.filter(shape => !shape.isSelected);
+        if (selectedShapes.length === 0) return;
+
+        const selectedShapeIds = new Set(selectedShapes.map(shape => shape.id));
+        const updatedShapes = shapes.filter(shape => !selectedShapeIds.has(shape.id));
         setShapes(updatedShapes);
         setSelectedShapes([]);
+        setSelectedShape(null);
+        setSelectedShapeId(null);
+        saveCanvasState();
     };
 
     const handleHideSelected = () => {
-        const updatedShapes = shapes.map(shape => 
+        const updatedShapes = shapes.map(shape =>
             shape.isSelected ? { ...shape, isVisible: !shape.isVisible } : shape
         );
         setShapes(updatedShapes);
     };
 
     const handleMoveSelected = (dx: number, dy: number) => {
-        const updatedShapes = shapes.map(shape => 
+        const updatedShapes = shapes.map(shape =>
             shape.isSelected ? {
                 ...shape,
                 startX: (shape.startX || 0) + dx,
@@ -1379,7 +1082,10 @@ const InfiniteCanvas2: React.FC = () => {
     useHotkeys('r', () => handleToolHotkey('rectangle'), []);
     useHotkeys('c', () => handleToolHotkey('circle'), []);
     useHotkeys('e', () => handleToolHotkey('eraser'), []);
-    useHotkeys('delete', handleDeleteSelected, [shapes]);
+    useHotkeys(['delete', 'backspace'], (event) => {
+        event.preventDefault();
+        handleDeleteSelected();
+    }, { enableOnFormTags: true }, [shapes, selectedShapes]);
     useHotkeys('h', handleHideSelected, [shapes]);
     useHotkeys('up', () => handleMoveSelected(0, -1), [shapes]);
     useHotkeys('down', () => handleMoveSelected(0, 1), [shapes]);
@@ -1410,62 +1116,259 @@ const InfiniteCanvas2: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleCopy, handlePaste]);
 
-    const renderLayers = () => (
-        <div className="space-y-2">
-            <div className="flex justify-end mb-2">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCopy}
-                    disabled={selectedShapes.length === 0}
-                    title="Copy selected shapes (Ctrl+C)"
-                >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copy
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handlePaste}
-                    disabled={copiedShapes.length === 0}
-                    title="Paste copied shapes (Ctrl+V)"
-                >
-                    <Clipboard className="w-4 h-4 mr-1" />
-                    Paste
-                </Button>
-            </div>
-            {shapes.slice().reverse().map((shape, index) => (
-                <div
-                    key={shape.id}
-                    className={`flex items-center justify-between p-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded ${shape.isSelected ? 'border-2 border-blue-500' : ''}`}
-                    onClick={(e) => handleShapeSelect(shape.id, e.ctrlKey || e.metaKey)}
-                >
-                    <span className="text-sm truncate flex-grow">{`Layer ${shapes.length - index}: ${shape.tool}`}</span>
-                    <div className="flex space-x-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleShapeVisibilityToggle(shape.id);
-                            }}
-                        >
-                            {shape.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleShapeDelete(shape.id);
-                            }}
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </Button>
-                    </div>
+    const handleLayerNameChange = (id: string, newName: string) => {
+        setShapes(shapes.map(shape =>
+            shape.id === id ? { ...shape, name: newName } : shape
+        ));
+        setIsEditingLayerName(null);
+    };
+
+    const onDragEnd = (result: any) => {
+        if (!result.destination) {
+            return;
+        }
+
+        const items = Array.from(shapes);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
+
+        // Update zIndex for all shapes
+        const updatedShapes = items.map((shape, index) => ({
+            ...shape,
+            zIndex: shapes.length - index
+        }));
+
+        setShapes(updatedShapes);
+    };
+    // Add this function near the other rendering functions
+    const renderPropertiesPanel = () => {
+        if (selectedShape) {
+            switch (selectedShape.tool) {
+                case 'brush':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Brush Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8 bg-white dark:bg-gray-700"
+                                    value={selectedShape.color}
+                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Brush Size</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    max="50"
+                                    value={selectedShape.strokeWidth}
+                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
+                                />
+                            </div>
+                        </>
+                    );
+                case 'rectangle':
+                case 'circle':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Fill Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.color}
+                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.rectangleBorderColor || selectedShape.circleBorderColor || '#000000'}
+                                    onChange={(e) => handleSelectedShapePropertyChange(selectedShape.tool === 'rectangle' ? 'rectangleBorderColor' : 'circleBorderColor', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Border Width</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="0"
+                                    max="20"
+                                    value={selectedShape.strokeWidth}
+                                    onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Width</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.width}
+                                    onChange={(e) => handleSelectedShapePropertyChange('width', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Height</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="1"
+                                    value={selectedShape.height}
+                                    onChange={(e) => handleSelectedShapePropertyChange('height', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Opacity (%)</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="0"
+                                    max="100"
+                                    value={selectedShape.tool === 'rectangle' ? selectedShape.rectangleOpacity : selectedShape.circleOpacity}
+                                    onChange={(e) => handleSelectedShapePropertyChange(selectedShape.tool === 'rectangle' ? 'rectangleOpacity' : 'circleOpacity', parseInt(e.target.value))}
+                                />
+                            </div>
+                        </>
+                    );
+                case 'text':
+                    return (
+                        <>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Text Content</label>
+                                <input
+                                    type="text"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    value={selectedShape.text || ''}
+                                    onChange={(e) => handleSelectedShapePropertyChange('text', e.target.value)}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Font Size</label>
+                                <input
+                                    type="number"
+                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
+                                    min="8"
+                                    max="72"
+                                    value={selectedShape.fontSize || 16}
+                                    onChange={(e) => handleSelectedShapePropertyChange('fontSize', parseInt(e.target.value))}
+                                />
+                            </div>
+                            <div className="mb-2">
+                                <label className="text-sm font-medium">Text Color</label>
+                                <input
+                                    type="color"
+                                    className="block mt-1 w-full h-8"
+                                    value={selectedShape.color}
+                                    onChange={(e) => handleSelectedShapePropertyChange('color', e.target.value)}
+                                />
+                            </div>
+                        </>
+                    );
+                default:
+                    return null;
+            }
+        } else {
+            return (
+                <div className="text-sm">
+                    Select a shape to edit its properties.
                 </div>
-            ))}
-        </div>
+            );
+        }
+    };
+    const renderLayers = () => (
+        <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="layers">
+                {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                        <div className="flex justify-end mb-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleCopy}
+                                disabled={selectedShapes.length === 0}
+                                title="Copy selected shapes (Ctrl+C)"
+                            >
+                                <Copy className="w-4 h-4 mr-1" />
+                                Copy
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handlePaste}
+                                disabled={copiedShapes.length === 0}
+                                title="Paste copied shapes (Ctrl+V)"
+                            >
+                                <Clipboard className="w-4 h-4 mr-1" />
+                                Paste
+                            </Button>
+                        </div>
+                        {shapes.slice().reverse().map((shape, index) => (
+                            <Draggable key={shape.id} draggableId={shape.id} index={index}>
+                                {(provided) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={`flex items-center justify-between p-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded ${shape.isSelected ? 'border-2 border-blue-500' : ''}`}
+                                        onClick={(e) => handleShapeSelect(shape.id, e.ctrlKey || e.metaKey)}
+                                    >
+                                        {isEditingLayerName === shape.id ? (
+                                            <Input
+                                                className='w-full text-black dark:text-white bg-transparent outline-none border-0 ring-0 focus:ring-0 focus:ring-offset-0 shadow-none focus:border-0 p-0'
+                                                type="text"
+                                                defaultValue={shape.name || `Layer ${shapes.length - index}: ${shape.tool}`}
+                                                onBlur={(e) => handleLayerNameChange(shape.id, e.target.value)}
+                                                onKeyPress={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        handleLayerNameChange(shape.id, e.currentTarget.value);
+                                                    }
+                                                }}
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <span
+                                                className="text-sm truncate flex-grow cursor-pointer"
+                                                onDoubleClick={() => setIsEditingLayerName(shape.id)}
+                                            >
+                                                {shape.name || `Layer ${shapes.length - index}: ${shape.tool}`}
+                                            </span>
+                                        )}
+                                        <div className="flex space-x-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleShapeVisibilityToggle(shape.id);
+                                                }}
+                                            >
+                                                {shape.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleShapeDelete(shape.id);
+                                                }}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </Draggable>
+                        ))}
+                        {provided.placeholder}
+                    </div>
+                )}
+            </Droppable>
+        </DragDropContext>
     );
 
     const MintForm: React.FC<{ onMint: (title: string, description: string) => void; onClose: () => void }> = ({ onMint, onClose }) => {
@@ -1644,7 +1547,7 @@ const InfiniteCanvas2: React.FC = () => {
                 <input
                     type="text"
                     autoFocus
-                    style={{...inputStyle, backgroundColor: 'transparent'}}
+                    style={{ ...inputStyle, backgroundColor: 'transparent' }}
                     onBlur={(e) => handleTextInput(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -1658,9 +1561,32 @@ const InfiniteCanvas2: React.FC = () => {
         return null;
     };
 
+    // Add this function near the other utility functions
+    const isPointInResizeHandle = (x: number, y: number, shape: Shape): string | null => {
+        if (shape.startX === undefined || shape.startY === undefined || shape.width === undefined || shape.height === undefined) {
+            return null;
+        }
+
+        const handleSize = 10;
+        const handles = [
+            { x: shape.startX, y: shape.startY, cursor: 'nwse-resize' },
+            { x: shape.startX + shape.width, y: shape.startY, cursor: 'nesw-resize' },
+            { x: shape.startX, y: shape.startY + shape.height, cursor: 'nesw-resize' },
+            { x: shape.startX + shape.width, y: shape.startY + shape.height, cursor: 'nwse-resize' },
+        ];
+
+        for (const handle of handles) {
+            if (Math.abs(x - handle.x) <= handleSize / 2 && Math.abs(y - handle.y) <= handleSize / 2) {
+                return handle.cursor;
+            }
+        }
+
+        return null;
+    };
+
     return (
         <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
-            <TopMenuBar 
+            <TopMenuBar
                 isDarkMode={isDarkMode}
                 onThemeToggle={() => setIsDarkMode(!isDarkMode)}
                 onExport={showExportModal}
@@ -1687,7 +1613,7 @@ const InfiniteCanvas2: React.FC = () => {
                 )}
             </div>
 
-            <ToolBar 
+            <ToolBar
                 selectedTool={selectedTool}
                 selectedSubTool={selectedSubTool}
                 onToolSelect={handleToolSelect}
