@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import ExportModal from './ExportModal';
 import SaveModal from './SaveModal';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { AppConfig } from '@/config/appConfig';
 
 interface Shape {
     id: string;
@@ -74,11 +75,11 @@ const InfiniteCanvas2: React.FC = () => {
     const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
     const selectionBoxRef = useRef<HTMLDivElement>(null);
     const [selectedShapes, setSelectedShapes] = useState<Shape[]>([]);
-    const [eraserSize, setEraserSize] = useState<number>(20);
+    const [eraserSize, setEraserSize] = useState<number>(AppConfig.canvas.defaultEraserSize);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalContent, setModalContent] = useState<React.ReactNode>('');
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
+    const [zoom, setZoom] = useState(AppConfig.canvas.defaultZoom);
     const [isPanning, setIsPanning] = useState(false);
     const [isMinting, setIsMinting] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(100);
@@ -97,31 +98,6 @@ const InfiniteCanvas2: React.FC = () => {
     const [textInputPosition, setTextInputPosition] = useState<{ x: number; y: number } | null>(null);
     const [isEditingLayerName, setIsEditingLayerName] = useState<string | null>(null);
 
-    const tools = [
-        { id: 'pointer', icon: MousePointer2, tooltip: 'Click, move and resize items on the canvas (P)', hotkey: 'P' },
-        { id: 'brush', icon: Brush, tooltip: 'Draw freely on the canvas (B)', hotkey: 'B' },
-        { id: 'rectangle', icon: Square, tooltip: 'Input rectangle shape on canvas (R)', hotkey: 'R' },
-        { id: 'circle', icon: Circle, tooltip: 'Input circle shape on canvas (C)', hotkey: 'C' },
-        { id: 'eraser', icon: Eraser, tooltip: 'Clean canvas (E)', hotkey: 'E' },
-        { id: 'text', icon: Type, tooltip: 'Add text to the canvas (T)', hotkey: 'T' },
-        { id: 'image', icon: ImageIcon, tooltip: 'Add image to the canvas (I)', hotkey: 'I' },
-    ];
-
-    const subToolIcons = {
-        pencil: Pencil,
-        pen: PenTool,
-        marker: Edit3,
-        rectangle: Square,
-        square: Square,
-        parallelogram: Hexagon,
-        trapezoid: Triangle,
-        rhombus: Octagon,
-        circle: Circle,
-        ellipse: Circle,
-        semicircle: Disc,
-        oval: Circle,
-        arc: Aperture,
-    };
 
     const handleToolSelect = useCallback((toolId: string, subToolId?: string) => {
         console.log("Selected tool:", toolId, "Sub-tool:", subToolId);
@@ -275,8 +251,8 @@ const InfiniteCanvas2: React.FC = () => {
                             id: uuidv4(),
                             tool: 'brush',
                             points: [{ x, y }],
-                            color: '#000000',
-                            strokeWidth: 2,
+                            color: AppConfig.tools.brush.defaultColor,
+                            strokeWidth: AppConfig.tools.brush.defaultWidth,
                             isVisible: true,
                             isSelected: false,
                             zIndex: shapes.length, // Set zIndex to the current number of shapes
@@ -293,13 +269,13 @@ const InfiniteCanvas2: React.FC = () => {
                             startY: y,
                             width: 0,
                             height: 0,
-                            color: '#ffffff',
-                            strokeWidth: 1,
+                            color: AppConfig.tools.rectangle.defaultFillColor,
+                            strokeWidth: AppConfig.tools.rectangle.defaultBorderWidth,
                             isVisible: true,
                             isSelected: false,
-                            rectangleBorderColor: '#000000',
-                            rectangleBorderRadius: 0,
-                            rectangleOpacity: 100,
+                            rectangleBorderColor: AppConfig.tools.rectangle.defaultBorderColor,
+                            rectangleBorderRadius: AppConfig.tools.rectangle.defaultBorderRadius,
+                            rectangleOpacity: AppConfig.tools.rectangle.defaultOpacity,
                             rectangleRotation: 0,
                             zIndex: shapes.length, // Set zIndex to the current number of shapes
                         };
@@ -315,12 +291,12 @@ const InfiniteCanvas2: React.FC = () => {
                             startY: y,
                             width: 0,
                             height: 0,
-                            color: '#ffffff',
-                            strokeWidth: 1,
+                            color: AppConfig.tools.circle.defaultFillColor,
+                            strokeWidth: AppConfig.tools.circle.defaultBorderWidth,
                             isVisible: true,
                             isSelected: false,
-                            circleBorderColor: '#000000',
-                            circleOpacity: 100,
+                            circleBorderColor: AppConfig.tools.circle.defaultBorderColor,
+                            circleOpacity: AppConfig.tools.circle.defaultOpacity,
                             circleRotation: 0,
                             zIndex: shapes.length, // Set zIndex to the current number of shapes
                         };
@@ -516,8 +492,8 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     const drawBackgroundDots = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-        const dotSpacing = 20; // Adjust this value to change the spacing between dots
-        const dotRadius = 1; // Adjust this value to change the size of the dots
+        const dotSpacing = AppConfig.canvas.dotSpacing; // Adjust this value to change the spacing between dots
+        const dotRadius = AppConfig.canvas.dotRadius; // Adjust this value to change the size of the dots
 
         ctx.fillStyle = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
 
@@ -957,7 +933,7 @@ const InfiniteCanvas2: React.FC = () => {
                     metadata: metadata,
                     receiver_id: wallet?.getAccountId(),
                 },
-                deposit: '700000000000000000000000',
+                deposit: AppConfig.nft.mintDeposit,
             });
 
             router.push(`/?transactionHashes=${result.transaction.hash}`);
@@ -1024,25 +1000,25 @@ const InfiniteCanvas2: React.FC = () => {
     const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault();
         const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        const newZoom = Math.min(Math.max(zoom * zoomFactor, 0.1), 5);
+        const newZoom = Math.min(Math.max(zoom * zoomFactor, AppConfig.canvas.minZoom), AppConfig.canvas.maxZoom);
         setZoom(newZoom);
         setZoomLevel(Math.round(newZoom * 100));
     };
 
     const handleZoomIn = () => {
-        const newZoom = Math.min(zoom * 1.1, 5);
+        const newZoom = Math.min(zoom * 1.1, AppConfig.canvas.maxZoom);
         setZoom(newZoom);
         setZoomLevel(Math.round(newZoom * 100));
     };
 
     const handleZoomOut = () => {
-        const newZoom = Math.max(zoom * 0.9, 0.1);
+        const newZoom = Math.max(zoom * 0.9, AppConfig.canvas.minZoom);
         setZoom(newZoom);
         setZoomLevel(Math.round(newZoom * 100));
     };
 
     const handleResetZoom = () => {
-        setZoom(1);
+        setZoom(AppConfig.canvas.defaultZoom);
         setZoomLevel(100);
     };
 
@@ -1103,12 +1079,12 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     // Use the useHotkeys hook for handling hotkeys
-    useHotkeys('p', () => handleToolHotkey('pointer'), []);
-    useHotkeys('b', () => handleToolHotkey('brush'), []);
-    useHotkeys('r', () => handleToolHotkey('rectangle'), []);
-    useHotkeys('c', () => handleToolHotkey('circle'), []);
-    useHotkeys('e', () => handleToolHotkey('eraser'), []);
-    useHotkeys(['delete', 'backspace'], (event) => {
+    useHotkeys(AppConfig.hotkeys.tools.pointer, () => handleToolHotkey('pointer'), []);
+    useHotkeys(AppConfig.hotkeys.tools.brush, () => handleToolHotkey('brush'), []);
+    useHotkeys(AppConfig.hotkeys.tools.rectangle, () => handleToolHotkey('rectangle'), []);
+    useHotkeys(AppConfig.hotkeys.tools.circle, () => handleToolHotkey('circle'), []);
+    useHotkeys(AppConfig.hotkeys.tools.eraser, () => handleToolHotkey('eraser'), []);
+    useHotkeys(AppConfig.hotkeys.actions.delete, (event) => {
         event.preventDefault();
         handleDeleteSelected();
     }, { enableOnFormTags: true }, [shapes, selectedShapes]);
@@ -1119,7 +1095,7 @@ const InfiniteCanvas2: React.FC = () => {
     useHotkeys('right', () => handleMoveSelected(1, 0), [shapes]);
 
     // Add this new hotkey handler for the text tool
-    useHotkeys('t', () => handleToolSelect('text'), [handleToolSelect]);
+    useHotkeys(AppConfig.hotkeys.tools.text, () => handleToolSelect('text'), [handleToolSelect]);
 
     const handleSelectAll = () => {
         const allShapes = shapes.map(shape => ({ ...shape, isSelected: true }));
@@ -1132,15 +1108,15 @@ const InfiniteCanvas2: React.FC = () => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.ctrlKey || e.metaKey) {
                 switch (e.key.toLowerCase()) {
-                    case 'c':
+                    case AppConfig.hotkeys.actions.copy:
                         e.preventDefault();
                         handleCopy();
                         break;
-                    case 'v':
+                    case AppConfig.hotkeys.actions.paste:
                         e.preventDefault();
                         handlePaste();
                         break;
-                    case 'a':
+                    case AppConfig.hotkeys.actions.selectAll:
                         e.preventDefault();
                         handleSelectAll();
                         break;
@@ -1355,7 +1331,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 size="sm"
                                 onClick={handleCopy}
                                 disabled={selectedShapes.length === 0}
-                                title="Copy selected shapes (Ctrl+C)"
+                                title={`Copy selected shapes (${AppConfig.hotkeys.actions.copy})`}
                             >
                                 <Copy className="w-4 h-4 mr-1" />
                                 Copy
@@ -1365,7 +1341,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 size="sm"
                                 onClick={handlePaste}
                                 disabled={copiedShapes.length === 0}
-                                title="Paste copied shapes (Ctrl+V)"
+                                title={`Paste copied shapes (${AppConfig.hotkeys.actions.paste})`}
                             >
                                 <Clipboard className="w-4 h-4 mr-1" />
                                 Paste
@@ -1374,7 +1350,7 @@ const InfiniteCanvas2: React.FC = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleSelectAll}
-                                title="Select All (Ctrl+A)"
+                                title={`Select All (${AppConfig.hotkeys.actions.selectAll})`}
                             >
                                 <MousePointer2 className="w-4 h-4 mr-1" />
                                 Select All
@@ -1555,32 +1531,32 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     // Add these new hotkey handlers
-    useHotkeys('ctrl+e', (event) => {
+    useHotkeys(AppConfig.hotkeys.actions.export, (event) => {
         event.preventDefault();
         showExportModal();
     }, [selectedShapes]);
 
-    useHotkeys('ctrl+m', (event) => {
+    useHotkeys(AppConfig.hotkeys.actions.mint, (event) => {
         event.preventDefault();
         handleMint();
     }, [handleMint]);
 
-    useHotkeys('ctrl+n', (event) => {
+    useHotkeys(AppConfig.hotkeys.actions.new, (event) => {
         event.preventDefault();
         handleClearCanvas();
     }, [handleClearCanvas]);
 
-    useHotkeys('ctrl+s', (event) => {
+    useHotkeys(AppConfig.hotkeys.actions.save, (event) => {
         event.preventDefault();
         showSaveModal();
     }, [shapes, saveFileName]);
 
-    useHotkeys('ctrl+o', (event) => {
+    useHotkeys(AppConfig.hotkeys.actions.open, (event) => {
         event.preventDefault();
         handleLoadCanvasState();
     }, [handleLoadCanvasState]);
 
-    useHotkeys('ctrl+d', (event) => {
+    useHotkeys(AppConfig.hotkeys.actions.toggleTheme, (event) => {
         event.preventDefault();
         setIsDarkMode(!isDarkMode);
     }, [isDarkMode]);
@@ -1593,9 +1569,9 @@ const InfiniteCanvas2: React.FC = () => {
                 startX: textInputPosition.x,
                 startY: textInputPosition.y,
                 text: text,
-                color: '#000000',
-                fontSize: 16,
-                fontFamily: 'Arial',
+                color: AppConfig.tools.text.defaultColor,
+                fontSize: AppConfig.tools.text.defaultFontSize,
+                fontFamily: AppConfig.tools.text.defaultFontFamily,
                 isVisible: true,
                 isSelected: false,
                 zIndex: shapes.length,
@@ -1639,7 +1615,7 @@ const InfiniteCanvas2: React.FC = () => {
             return null;
         }
 
-        const handleSize = 10;
+        const handleSize = AppConfig.canvas.handleSize;
         const handles = [
             { x: shape.startX, y: shape.startY, cursor: 'nwse-resize' },
             { x: shape.startX + shape.width, y: shape.startY, cursor: 'nesw-resize' },
@@ -1656,7 +1632,7 @@ const InfiniteCanvas2: React.FC = () => {
         return null;
     };
 
-    useHotkeys('ctrl+a', (event) => {
+    useHotkeys(AppConfig.hotkeys.actions.selectAll, (event) => {
         event.preventDefault();
         handleSelectAll();
     }, { enableOnFormTags: true }, [shapes]);
@@ -1691,7 +1667,11 @@ const InfiniteCanvas2: React.FC = () => {
     };
 
     return (
-        <div className={`h-screen w-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
+        <div className={`h-screen w-screen overflow-hidden ${
+            isDarkMode 
+                ? AppConfig.ui.darkMode.backgroundColor + ' ' + AppConfig.ui.darkMode.textColor 
+                : AppConfig.ui.lightMode.backgroundColor + ' ' + AppConfig.ui.lightMode.textColor
+        }`}>
             <TopMenuBar
                 isDarkMode={isDarkMode}
                 onThemeToggle={() => setIsDarkMode(!isDarkMode)}

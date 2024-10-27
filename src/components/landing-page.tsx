@@ -1,146 +1,221 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Infinity, Zap, Shield } from 'lucide-react'
+import { ArrowRight, Infinity } from 'lucide-react'
+import { AppConfig } from '@/config/appConfig'
 import Link from 'next/link'
+import Image from 'next/image'
+import emailjs from '@emailjs/browser'
+import { EmailConfig } from '@/config/emailConfig'
+import confetti from 'canvas-confetti'
+
+// Add this function to trigger confetti
+const triggerConfetti = () => {
+  // First burst
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#14B8A6', '#A855F7', '#ffffff'] // teal and purple to match theme
+  });
+
+  // Second burst after a small delay
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0 },
+      colors: ['#14B8A6', '#A855F7', '#ffffff']
+    });
+  }, 200);
+
+  // Third burst after another small delay
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 },
+      colors: ['#14B8A6', '#A855F7', '#ffffff']
+    });
+  }, 400);
+}
 
 export function LandingPage() {
+  const [email, setEmail] = useState('')
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      const templateParams = {
+        to_email: EmailConfig.toEmail,
+        from_email: email,
+        message: `New waitlist signup from: ${email}`,
+        subject: 'New Waitlist Signup'
+      }
+
+      await emailjs.send(
+        EmailConfig.serviceId,
+        EmailConfig.templateId,
+        templateParams,
+        EmailConfig.publicKey
+      )
+
+      setIsSubmitted(true)
+      setEmail('')
+      
+      // Store email in localStorage
+      const existingEmails = JSON.parse(localStorage.getItem('waitlistEmails') || '[]')
+      localStorage.setItem('waitlistEmails', JSON.stringify([...existingEmails, email]))
+
+      // Trigger confetti animation on successful submission
+      triggerConfetti()
+
+    } catch (err) {
+      console.error('Failed to send email:', err)
+      setError('Failed to join waitlist. Please try again later.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-[#121212] text-[#E6E6FA] overflow-hidden">
+    <div className="min-h-screen bg-black text-white overflow-hidden">
       <BackgroundAnimation />
 
       {/* Header Section */}
       <header className="container mx-auto px-4 py-6 relative z-10">
         <nav className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <img src="/logo.svg" alt="Nexus" width={50} height={50} />
-            <span className="text-2xl font-bold">Nexus</span>
+            <Image 
+              src="/logo.svg" 
+              alt={AppConfig.appName} 
+              width={50} 
+              height={50}
+              priority
+            />
+            <span className="text-2xl font-bold bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
+              {AppConfig.appName}
+            </span>
           </div>
           <div className="hidden md:flex space-x-6">
-            <a href="#features" className="hover:text-[#008080] transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-[#008080] transition-colors">How It Works</a>
-            <a href="/draw" className="hover:text-[#008080] transition-colors">Login</a>
+            <a href="#features" className="hover:text-teal-500 transition-colors">Features</a>
+            <a href="#waitlist" className="hover:text-teal-500 transition-colors">Join Waitlist</a>
           </div>
-          <button className="bg-[#008080] text-white px-4 py-2 rounded-full hover:bg-[#006666] transition-colors">
-            <Link href="/draw">Get Started</Link>
-          </button>
         </nav>
       </header>
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center relative z-10">
-        <motion.h1
-          className="text-5xl md:text-7xl font-bold mb-6"
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
+          className="max-w-3xl mx-auto"
         >
-          Your NFT Studio
-        </motion.h1>
-        <motion.p
-          className="text-xl md:text-2xl mb-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          Create, Mint, and Own Your Digital Art with Ease
-        </motion.p>
-        <motion.button
-          className="bg-[#008080] text-white text-lg px-8 py-4 rounded-full hover:bg-[#006666] transition-colors"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-        >
-          <Link href="/draw">Start Creating</Link>
-
-        </motion.button>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
+            Coming Soon
+          </h1>
+          <p className="text-xl md:text-2xl mb-10 text-gray-300">
+            {AppConfig.appDescription}
+          </p>
+          
+          {/* Waitlist Form */}
+          <div id="waitlist" className="max-w-md mx-auto">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="flex-grow px-4 py-3 rounded-lg bg-gray-900 border border-gray-800 focus:border-teal-500 focus:outline-none transition-colors"
+                  required
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="submit"
+                  className={`px-6 py-3 bg-gradient-to-r from-teal-500 to-purple-500 rounded-lg 
+                    hover:opacity-90 transition-opacity flex items-center justify-center space-x-2
+                    ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isSubmitting}
+                >
+                  <span>{isSubmitting ? 'Joining...' : 'Join Waitlist'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+            
+            {error && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-4 text-red-500"
+              >
+                {error}
+              </motion.p>
+            )}
+            
+            {isSubmitted && !error && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-4 text-teal-500"
+              >
+                Thanks for joining! We&apos;ll notify you when we launch.
+              </motion.p>
+            )}
+          </div>
+        </motion.div>
       </section>
 
-      {/* Key Features Section */}
+      {/* Features Section */}
       <section id="features" className="py-20 relative z-10">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12">Key Features</h2>
+          <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
+            What to Expect
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<Infinity className="h-12 w-12 text-[#008080]" />}
-              title="Infinite Canvas"
-              description="Unleash your creativity without boundaries on our limitless digital canvas."
-            />
-            <FeatureCard
-              icon={<Zap className="h-12 w-12 text-[#008080]" />}
-              title="Easy NFT Minting"
-              description="Turn your artwork into NFTs with just a few clicks, powered by NEAR blockchain."
-            />
-            <FeatureCard
-              icon={<Shield className="h-12 w-12 text-[#008080]" />}
-              title="Secure Ownership"
-              description="Your NFTs are securely stored on the blockchain, ensuring true ownership of your digital creations."
-            />
+            {AppConfig.landingPage.features.map((feature, index) => (
+              <FeatureCard
+                key={index}
+                icon={<Infinity className="h-12 w-12 text-teal-500" />}
+                title={feature.title}
+                description={feature.description}
+              />
+            ))}
           </div>
-        </div>
-      </section>
-      {/* <section id="how-it-works" className="py-20 relative z-10">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <StepCard number={1} title="Draw" description="Create your masterpiece on our infinite canvas" />
-            <StepCard number={2} title="Customize" description="Add details and metadata to your NFT" />
-            <StepCard number={3} title="Mint" description="Turn your art into an NFT with one click" />
-            <StepCard number={4} title="Own" description="Securely store and showcase your digital creation" />
-          </div>
-        </div>
-      </section> */}
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 relative z-10">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <StepCard number={1} title="Draw" description="Create your masterpiece on our infinite canvas" />
-            <StepCard number={2} title="Customize" description="Add details and metadata to your NFT" />
-            <StepCard number={3} title="Mint" description="Turn your art into an NFT with one click" />
-            <StepCard number={4} title="Own" description="Securely store and showcase your digital creation" />
-          </div>
-        </div>
-      </section>
-
-      {/* Call-to-Action Section */}
-      <section className="py-20 bg-gradient-to-r from-[#4A0E4E] to-[#008080] relative z-10">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold mb-8">Ready to Turn Your Creativity into NFTs?</h2>
-          <button className="bg-white text-[#4A0E4E] text-lg px-8 py-4 rounded-full hover:bg-[#E6E6FA] transition-colors">
-            <Link href={"/draw"}> Start your design journey</Link>
-          </button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#1E1E1E] py-12 relative z-10">
+      <footer className="py-12 relative z-10 border-t border-gray-900">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap justify-between">
-            <div className="w-full md:w-1/3 mb-8 md:mb-0">
+          <div className="flex flex-wrap justify-between items-center">
+            <div className="w-full md:w-auto mb-8 md:mb-0">
               <div className="flex items-center space-x-2 mb-4">
-                <Infinity className="h-8 w-8 text-[#008080]" />
-                <span className="text-2xl font-bold">Nexus</span>
+                <Infinity className="h-8 w-8 text-teal-500" />
+                <span className="text-2xl font-bold bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
+                  {AppConfig.appName}
+                </span>
               </div>
-              <p className="text-sm text-[#E6E6FA]">Create, mint, and own your digital art with ease.</p>
+              <p className="text-sm text-gray-400">Version: {AppConfig.appVersion}</p>
             </div>
-            <div className="w-full md:w-1/3">
-              <h3 className="text-lg font-semibold mb-4">Stay Updated</h3>
-              <form className="flex">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="bg-[#2A2A2A] text-[#E6E6FA] px-4 py-2 rounded-l-full focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  className="bg-[#008080] text-white px-4 py-2 rounded-r-full hover:bg-[#006666] transition-colors"
-                >
-                  Subscribe
-                </button>
-              </form>
+            <div className="flex space-x-6 text-gray-400">
+              <Link href="/privacy" className="hover:text-teal-500 transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-teal-500 transition-colors">
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>
@@ -152,29 +227,13 @@ export function LandingPage() {
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
     <motion.div
-      className="bg-[#1E1E1E] text-[#E6E6FA] p-6 rounded-lg"
-      whileHover={{ scale: 1.05 }}
-      transition={{ duration: 0.3 }}
+      className="p-6 rounded-lg bg-gradient-to-b from-gray-900 to-black border border-gray-800"
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.2 }}
     >
       <div className="mb-4">{icon}</div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p>{description}</p>
-    </motion.div>
-  )
-}
-
-function StepCard({ number, title, description }: { number: number; title: string; description: string }) {
-  return (
-    <motion.div
-      className="bg-[#1E1E1E] text-[#E6E6FA] p-6 rounded-lg relative"
-      whileHover={{ scale: 1.05 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="absolute top-4 right-4 bg-[#008080] text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
-        {number}
-      </div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p>{description}</p>
+      <h3 className="text-xl font-semibold mb-2 text-white">{title}</h3>
+      <p className="text-gray-400">{description}</p>
     </motion.div>
   )
 }
@@ -183,32 +242,32 @@ function BackgroundAnimation() {
   return (
     <div className="fixed inset-0 z-0">
       <motion.div
-        className="absolute inset-0 bg-[#4A0E4E] opacity-20"
+        className="absolute inset-0 opacity-30"
         animate={{
           background: [
-            "radial-gradient(circle, #4A0E4E 0%, #121212 100%)",
-            "radial-gradient(circle, #008080 0%, #121212 100%)",
-            "radial-gradient(circle, #4A0E4E 0%, #121212 100%)",
+            "radial-gradient(circle, rgba(20, 184, 166, 0.2) 0%, rgba(0, 0, 0, 1) 100%)",
+            "radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(0, 0, 0, 1) 100%)",
+            "radial-gradient(circle, rgba(20, 184, 166, 0.2) 0%, rgba(0, 0, 0, 1) 100%)",
           ],
         }}
-        transition={{ repeat: 30000, duration: 10 }}
+        transition={{ repeat: Number.POSITIVE_INFINITY, duration: 10 }}
       />
-      {[...Array(50)].map((_, i) => (
+      {[...Array(30)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute bg-white rounded-full"
+          className="absolute bg-gradient-to-r from-teal-500 to-purple-500 rounded-full"
           style={{
-            width: Math.random() * 3 + 1,
-            height: Math.random() * 3 + 1,
+            width: Math.random() * 2 + 1,
+            height: Math.random() * 2 + 1,
             top: `${Math.random() * 100}%`,
             left: `${Math.random() * 100}%`,
           }}
           animate={{
             y: [0, Math.random() * 100 - 50],
-            opacity: [0, 1, 0],
+            opacity: [0, 0.5, 0],
           }}
           transition={{
-            repeat: 30000,
+            repeat: Number.POSITIVE_INFINITY,
             duration: Math.random() * 5 + 5,
             ease: "linear",
           }}
