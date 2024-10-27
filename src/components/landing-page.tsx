@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Infinity } from 'lucide-react'
 import { AppConfig } from '@/config/appConfig'
 import Link from 'next/link'
+import Image from 'next/image'
 import emailjs from '@emailjs/browser'
 import { EmailConfig } from '@/config/emailConfig'
 import confetti from 'canvas-confetti'
@@ -94,7 +95,13 @@ export function LandingPage() {
       <header className="container mx-auto px-4 py-6 relative z-10">
         <nav className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <img src="/logo.svg" alt={AppConfig.appName} width={50} height={50} />
+            <Image 
+              src="/logo.svg" 
+              alt={AppConfig.appName} 
+              width={50} 
+              height={50}
+              priority
+            />
             <span className="text-2xl font-bold bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
               {AppConfig.appName}
             </span>
@@ -163,7 +170,7 @@ export function LandingPage() {
                 animate={{ opacity: 1 }}
                 className="mt-4 text-teal-500"
               >
-                Thanks for joining! We'll notify you when we launch.
+                Thanks for joining! We&apos;ll notify you when we launch.
               </motion.p>
             )}
           </div>

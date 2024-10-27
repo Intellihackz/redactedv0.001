@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { AppConfig } from '@/config/appConfig'
+import Image from 'next/image'
 
 export function PrivacyPolicy() {
   return (
@@ -21,7 +22,13 @@ export function PrivacyPolicy() {
             </Link>
           </div>
           <div className="flex items-center space-x-2">
-            <img src="/logo.svg" alt={AppConfig.appName} width={40} height={40} />
+            <Image 
+              src="/logo.svg" 
+              alt={AppConfig.appName} 
+              width={40} 
+              height={40}
+              priority
+            />
             <span className="text-xl font-bold bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
               {AppConfig.appName}
             </span>

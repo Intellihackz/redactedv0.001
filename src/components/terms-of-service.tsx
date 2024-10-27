@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { AppConfig } from '@/config/appConfig'
+import Image from 'next/image'
 
 export function TermsOfService() {
   return (
@@ -21,7 +22,13 @@ export function TermsOfService() {
             </Link>
           </div>
           <div className="flex items-center space-x-2">
-            <img src="/logo.svg" alt={AppConfig.appName} width={40} height={40} />
+            <Image 
+              src="/logo.svg" 
+              alt={AppConfig.appName} 
+              width={40} 
+              height={40}
+              priority
+            />
             <span className="text-xl font-bold bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
               {AppConfig.appName}
             </span>
@@ -85,8 +92,7 @@ export function TermsOfService() {
             <section>
               <h2 className="text-2xl font-semibold mb-4 text-white">5. Limitation of Liability</h2>
               <p>
-                {AppConfig.appName} is provided "as is" without warranties of any kind. We are not 
-                responsible for any losses or damages arising from your use of the platform.
+                {AppConfig.appName} is provided &quot;as is&quot; without warranties of any kind.
               </p>
             </section>
           </div>
