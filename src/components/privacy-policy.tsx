@@ -6,8 +6,15 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { AppConfig } from '@/config/appConfig'
 import Image from 'next/image'
+import { useHasMounted } from '@/hooks/useHasMounted'
 
 export function PrivacyPolicy() {
+  const hasMounted = useHasMounted()
+
+  if (!hasMounted) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
       <BackgroundAnimation />
