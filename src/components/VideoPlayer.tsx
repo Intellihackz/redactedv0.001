@@ -179,16 +179,25 @@ export function VideoPlayer({ thumbnailUrl, videoUrl }: VideoPlayerProps) {
         <button
           onClick={handlePlayClick}
           disabled={isLoading || !isReady || !isVisible}
-          className={`absolute inset-0 z-20 flex items-center justify-center 
-            ${isLoading ? 'cursor-wait' : 'cursor-pointer'}`}
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ zIndex: 20 }}
+          aria-label={isLoading ? "Loading video" : "Play video"}
+          title={isLoading ? "Loading video" : "Play video"}
         >
+          <span className="sr-only">
+            {isLoading ? "Loading video" : "Play video"}
+          </span>
           {isLoading ? (
-            <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
+            <div 
+              className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center"
+              role="status"
+              aria-label="Loading"
+            >
               <Loader2 className="w-10 h-10 text-white animate-spin" />
             </div>
           ) : (
             <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center transition-transform hover:scale-110">
-              <Play className="w-10 h-10 text-white fill-white" />
+              <Play className="w-10 h-10 text-white fill-white" aria-hidden="true" />
             </div>
           )}
         </button>
@@ -196,8 +205,13 @@ export function VideoPlayer({ thumbnailUrl, videoUrl }: VideoPlayerProps) {
 
       {/* Loading Progress Indicator */}
       {isLoading && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800">
-          <div className="h-full bg-gradient-to-r from-teal-500 to-purple-500 animate-progress"></div>
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800"
+          role="progressbar"
+          aria-label="Loading progress"
+          style={{ zIndex: 20 }}
+        >
+          <div className="h-full bg-gradient-to-r from-teal-500 to-purple-500 animate-progress" />
         </div>
       )}
     </div>

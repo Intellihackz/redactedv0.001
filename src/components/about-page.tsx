@@ -161,7 +161,7 @@ function TeamMember({
       <div className="relative w-32 h-32 mx-auto mb-4">
         <Image
           src={image}
-          alt={name}
+          alt={`${name} - ${role}`}
           fill
           className="rounded-full object-cover"
         />
@@ -169,14 +169,35 @@ function TeamMember({
       <h3 className="text-xl font-semibold text-white">{name}</h3>
       <p className="text-gray-400 mb-4">{role}</p>
       <div className="flex justify-center space-x-4">
-        <a href={twitter} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-teal-500 transition-colors">
-          <Twitter className="w-5 h-5" />
+        <a 
+          href={twitter} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-gray-400 hover:text-teal-500 transition-colors"
+          aria-label={`Visit ${name}'s Twitter profile`}
+        >
+          <span className="sr-only">Twitter profile of {name}</span>
+          <Twitter className="w-5 h-5" aria-hidden="true" />
         </a>
-        <a href={github} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-teal-500 transition-colors">
-          <Github className="w-5 h-5" />
+        <a 
+          href={github} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-gray-400 hover:text-teal-500 transition-colors"
+          aria-label={`Visit ${name}'s GitHub profile`}
+        >
+          <span className="sr-only">GitHub profile of {name}</span>
+          <Github className="w-5 h-5" aria-hidden="true" />
         </a>
-        <a href={linkedin} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-teal-500 transition-colors">
-          <Linkedin className="w-5 h-5" />
+        <a 
+          href={linkedin} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-gray-400 hover:text-teal-500 transition-colors"
+          aria-label={`Visit ${name}'s LinkedIn profile`}
+        >
+          <span className="sr-only">LinkedIn profile of {name}</span>
+          <Linkedin className="w-5 h-5" aria-hidden="true" />
         </a>
       </div>
     </div>
