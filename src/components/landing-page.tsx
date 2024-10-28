@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Infinity ,Play, CheckCircle2, Code2, Paintbrush, Laptop } from 'lucide-react'
+import { ArrowRight, Infinity ,Play, CheckCircle2, Code2, Paintbrush, Laptop, Zap, Palette, Rocket, Bell } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import emailjs from '@emailjs/browser'
@@ -44,6 +44,21 @@ const triggerConfetti = () => {
     });
   }, 400);
 }
+
+// Add this helper function at the top of the file
+const getIconComponent = (iconName: string) => {
+  const icons = {
+    Infinity: <Infinity className="h-12 w-12 text-teal-500" />,
+    Zap: <Zap className="h-12 w-12 text-teal-500" />,
+    Palette: <Palette className="h-12 w-12 text-teal-500" />,
+    Paintbrush: <Paintbrush className="h-12 w-12 text-teal-500" />,
+    Bell: <Bell className="h-12 w-12 text-teal-500" />,
+    Laptop: <Laptop className="h-12 w-12 text-teal-500" />,
+    Rocket: <Rocket className="h-12 w-12 text-teal-500" />,
+    // Add other icons as needed
+  };
+  return icons[iconName as keyof typeof icons];
+};
 
 export function LandingPage() {
   const hasMounted = useHasMounted()
@@ -183,37 +198,37 @@ export function LandingPage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <a 
-              href="#demo"
+            <Link 
+              href={AppConfig.landingPage.cta.primary.href}
               className="px-8 py-4 bg-gradient-to-r from-teal-500 to-purple-500 rounded-lg hover:opacity-90 transition-opacity flex items-center space-x-2"
             >
               <Play className="w-5 h-5" />
-              <span>Watch Demo</span>
-            </a>
+              <span>{AppConfig.landingPage.cta.primary.text}</span>
+            </Link>
             <a 
-              href="#features" 
+              href={AppConfig.landingPage.cta.secondary.href}
               className="px-8 py-4 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
             >
-              Learn More
+              {AppConfig.landingPage.cta.secondary.text}
             </a>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20">
             <div className="text-center">
-              <div className="text-4xl font-bold text-teal-500">500+</div>
+              <div className="text-4xl font-bold text-teal-500">{AppConfig.landingPage.stats.betaSignups}</div>
               <div className="text-gray-400 mt-2">Beta Signups</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-purple-500">24/7</div>
+              <div className="text-4xl font-bold text-purple-500">{AppConfig.landingPage.stats.support}</div>
               <div className="text-gray-400 mt-2">Support</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-teal-500">100%</div>
+              <div className="text-4xl font-bold text-teal-500">{AppConfig.landingPage.stats.security}</div>
               <div className="text-gray-400 mt-2">Secure</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-purple-500">Web3</div>
+              <div className="text-4xl font-bold text-purple-500">{AppConfig.landingPage.stats.blockchain}</div>
               <div className="text-gray-400 mt-2">Powered</div>
             </div>
           </div>
@@ -245,7 +260,7 @@ export function LandingPage() {
             {AppConfig.landingPage.features.map((feature, index) => (
               <FeatureCard
                 key={index}
-                icon={<Infinity className="h-12 w-12 text-teal-500" />}
+                icon={getIconComponent(feature.icon)}
                 title={feature.title}
                 description={feature.description}
               />
@@ -261,30 +276,15 @@ export function LandingPage() {
             How it Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
-            <StepCard
-              number={1}
-              icon={<Paintbrush className="h-8 w-8" />}
-              title="Create"
-              description="Draw and design on our infinite canvas"
-            />
-            <StepCard
-              number={2}
-              icon={<Code2 className="h-8 w-8" />}
-              title="Mint"
-              description="Convert your art into NFTs instantly"
-            />
-            <StepCard
-              number={3}
-              icon={<Laptop className="h-8 w-8" />}
-              title="Share"
-              description="Showcase your work to the world"
-            />
-            <StepCard
-              number={4}
-              icon={<CheckCircle2 className="h-8 w-8" />}
-              title="Earn"
-              description="Monetize your digital creations"
-            />
+            {AppConfig.landingPage.steps.map((step, index) => (
+              <StepCard
+                key={index}
+                number={index + 1}
+                icon={getIconComponent(step.icon)}
+                title={step.title}
+                description={step.description}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -381,9 +381,9 @@ export function LandingPage() {
             <div>
               <h3 className="text-lg font-semibold mb-4">Connect</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="https://twitter.com/nexusart" target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">Twitter</a></li>
-                <li><a href="https://discord.gg/nexus" target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">Discord</a></li>
-                <li><a href="https://github.com/nexus-art" target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">GitHub</a></li>
+                <li><a href={AppConfig.landingPage.socials.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">Twitter</a></li>
+                <li><a href={AppConfig.landingPage.socials.discord} target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">Discord</a></li>
+                <li><a href={AppConfig.landingPage.socials.github} target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">GitHub</a></li>
               </ul>
             </div>
           </div>
@@ -467,3 +467,4 @@ function BackgroundAnimation() {
     </div>
   )
 }
+

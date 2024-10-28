@@ -1,7 +1,7 @@
 export const AppConfig = {
   // App details
-  appName: 'Nexus',
-  appDescription: 'Create, Mint, and Own Your Digital Art with Ease',
+  appName: 'NexusArt',
+  appDescription: 'Create, mint, and trade digital art on the NEAR blockchain with zero gas fees',
   appVersion: '1.0.0',
   
   // Canvas defaults
@@ -121,52 +121,70 @@ export const AppConfig = {
 
   // Add this to the AppConfig object
   landingPage: {
-    colors: {
-      primary: '#008080',
-      primaryHover: '#006666',
-      background: '#121212',
-      text: '#E6E6FA',
-      footerBg: '#1E1E1E',
-      gradient: {
-        from: '#4A0E4E',
-        to: '#008080'
-      }
+    stats: {
+      betaSignups: '500+',
+      support: '24/7',
+      security: '100%',
+      blockchain: 'NEAR'
     },
+    
     features: [
       {
-        title: "Infinite Canvas",
-        description: "Unleash your creativity without boundaries on our limitless digital canvas.",
-        icon: "Infinity"
+        title: 'Ultra-Low Fees',
+        description: 'Mint and trade NFTs with minimal costs on NEAR Protocol',
+        icon: 'Infinity'
       },
       {
-        title: "Easy NFT Minting",
-        description: "Turn your artwork into NFTs with just a few clicks, powered by NEAR blockchain.",
-        icon: "Zap"
+        title: 'Lightning Fast',
+        description: 'Experience sub-second finality on the NEAR blockchain',
+        icon: 'Zap'
       },
       {
-        title: "Secure Ownership",
-        description: "Your NFTs are securely stored on the blockchain, ensuring true ownership of your digital creations.",
-        icon: "Shield"
+        title: 'Advanced Tools',
+        description: 'Professional-grade drawing tools with an infinite canvas',
+        icon: 'Palette'
       }
     ],
+
     steps: [
       {
-        title: "Draw",
-        description: "Create your masterpiece on our infinite canvas"
+        title: 'Join Waitlist',
+        description: 'Sign up to be among the first to access our platform',
+        icon: 'Paintbrush'
       },
       {
-        title: "Customize",
-        description: "Add details and metadata to your NFT"
+        title: 'Get Notified',
+        description: 'Receive updates about our launch and early access',
+        icon: 'Bell'
       },
       {
-        title: "Mint",
-        description: "Turn your art into an NFT with one click"
+        title: 'Early Access',
+        description: 'Be first to try our advanced drawing tools',
+        icon: 'Laptop'
       },
       {
-        title: "Own",
-        description: "Securely store and showcase your digital creation"
+        title: 'Launch',
+        description: 'Start creating and minting your NFTs on NEAR',
+        icon: 'Rocket'
       }
-    ]
+    ],
+
+    cta: {
+      primary: {
+        text: 'Watch Demo',
+        href: '#demo'
+      },
+      secondary: {
+        text: 'Learn More',
+        href: '#features'
+      }
+    },
+
+    socials: {
+      twitter: 'https://twitter.com/nexusart',
+      discord: 'https://discord.gg/nexus',
+      github: 'https://github.com/nexus-art'
+    }
   }
 };
 
