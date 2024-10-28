@@ -1,12 +1,13 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Github, Twitter, Linkedin } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { AppConfig } from '@/config/appConfig'
 import { useHasMounted } from '@/hooks/useHasMounted'
+import { getTwitterProfileImage } from '@/utils/twitter'
 
 export function AboutPage() {
   const hasMounted = useHasMounted()
@@ -29,10 +30,10 @@ export function AboutPage() {
             </Link>
           </div>
           <div className="flex items-center space-x-2">
-            <Image 
-              src="/logo.svg" 
-              alt={AppConfig.appName} 
-              width={40} 
+            <Image
+              src="/logo.svg"
+              alt={AppConfig.appName}
+              width={40}
               height={40}
               priority
             />
@@ -59,7 +60,7 @@ export function AboutPage() {
             <section>
               <h2 className="text-2xl font-semibold mb-4 text-white">Our Mission</h2>
               <p className="text-lg leading-relaxed">
-                At {AppConfig.appName}, we're revolutionizing digital art creation and ownership through blockchain technology. 
+                At {AppConfig.appName}, we're revolutionizing digital art creation and ownership through blockchain technology.
                 Our platform empowers artists to create, mint, and truly own their digital creations with unprecedented ease and security.
               </p>
             </section>
@@ -67,38 +68,23 @@ export function AboutPage() {
             <section>
               <h2 className="text-2xl font-semibold mb-4 text-white">The Team</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <TeamMember
-                  name="John Doe"
-                  role="Founder & CEO"
-                  image="/team/founder.png"
-                  twitter="https://twitter.com/johndoe"
-                  github="https://github.com/johndoe"
-                  linkedin="https://linkedin.com/in/johndoe"
-                />
-                <TeamMember
-                  name="Jane Smith"
-                  role="Lead Developer"
-                  image="/team/developer.png"
-                  twitter="https://twitter.com/janesmith"
-                  github="https://github.com/janesmith"
-                  linkedin="https://linkedin.com/in/janesmith"
-                />
-                <TeamMember
-                  name="Mike Johnson"
-                  role="Creative Director"
-                  image="/team/creative.png"
-                  twitter="https://twitter.com/mikejohnson"
-                  github="https://github.com/mikejohnson"
-                  linkedin="https://linkedin.com/in/mikejohnson"
-                />
+                {AppConfig.team.map((member, index) => (
+                  <TeamMember
+                    key={index}
+                    name={member.name}
+                    role={member.role}
+                    image={member.avatar}
+                    twitter={member.twitter}
+                  />
+                ))}
               </div>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-4 text-white">Our Vision</h2>
               <p className="text-lg leading-relaxed">
-                We envision a future where digital artists have complete control over their creations, 
-                supported by a vibrant community and powered by cutting-edge blockchain technology. 
+                We envision a future where digital artists have complete control over their creations,
+                supported by a vibrant community and powered by cutting-edge blockchain technology.
                 {AppConfig.appName} is more than just a platform—it's a movement towards democratizing digital art.
               </p>
             </section>
@@ -109,18 +95,13 @@ export function AboutPage() {
                 Have questions or suggestions? We'd love to hear from you!
               </p>
               <div className="flex space-x-6">
-                <a 
-                  href="mailto:contact@nexus.art" 
+                <a
+                  href="mailto:studionexus@duck.com"
                   className="px-6 py-3 bg-gradient-to-r from-teal-500 to-purple-500 rounded-lg hover:opacity-90 transition-opacity"
                 >
                   Email Us
                 </a>
-                <a 
-                  href="https://discord.gg/nexus" 
-                  className="px-6 py-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
-                >
-                  Join Discord
-                </a>
+              
               </div>
             </section>
           </div>
@@ -141,63 +122,54 @@ export function AboutPage() {
   )
 }
 
-function TeamMember({ 
-  name, 
-  role, 
-  image, 
-  twitter, 
-  github, 
-  linkedin 
-}: { 
-  name: string; 
-  role: string; 
-  image: string; 
-  twitter: string; 
-  github: string; 
-  linkedin: string; 
+function TeamMember({
+  name,
+  role,
+  image,
+  twitter,
+}: {
+  name: string;
+  role: string;
+  image: string;
+  twitter: string;
 }) {
+  const [profileImage, setProfileImage] = useState(image)
+
+  useEffect(() => {
+    // Try to load Twitter profile image
+    const twitterImage = getTwitterProfileImage(twitter)
+    
+    // Check if image loads successfully
+    const img = document.createElement('img')
+    img.onload = () => {
+      setProfileImage(twitterImage)
+    }
+    img.src = twitterImage
+  }, [twitter, image])
+
   return (
     <div className="text-center">
       <div className="relative w-32 h-32 mx-auto mb-4">
         <Image
-          src={image}
+          src={profileImage}
           alt={`${name} - ${role}`}
           fill
           className="rounded-full object-cover"
+          unoptimized // Add this for external URLs
         />
       </div>
       <h3 className="text-xl font-semibold text-white">{name}</h3>
       <p className="text-gray-400 mb-4">{role}</p>
       <div className="flex justify-center space-x-4">
-        <a 
-          href={twitter} 
-          target="_blank" 
-          rel="noopener noreferrer" 
+        <a
+          href={twitter}
+          target="_blank"
+          rel="noopener noreferrer"
           className="text-gray-400 hover:text-teal-500 transition-colors"
           aria-label={`Visit ${name}'s Twitter profile`}
         >
           <span className="sr-only">Twitter profile of {name}</span>
           <Twitter className="w-5 h-5" aria-hidden="true" />
-        </a>
-        <a 
-          href={github} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="text-gray-400 hover:text-teal-500 transition-colors"
-          aria-label={`Visit ${name}'s GitHub profile`}
-        >
-          <span className="sr-only">GitHub profile of {name}</span>
-          <Github className="w-5 h-5" aria-hidden="true" />
-        </a>
-        <a 
-          href={linkedin} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="text-gray-400 hover:text-teal-500 transition-colors"
-          aria-label={`Visit ${name}'s LinkedIn profile`}
-        >
-          <span className="sr-only">LinkedIn profile of {name}</span>
-          <Linkedin className="w-5 h-5" aria-hidden="true" />
         </a>
       </div>
     </div>
