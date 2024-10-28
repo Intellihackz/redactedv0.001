@@ -9,8 +9,8 @@ import emailjs from '@emailjs/browser'
 import { EmailConfig } from '@/config/emailConfig'
 import { AppConfig } from '@/config/appConfig'
 import confetti from 'canvas-confetti'
-import { VideoPlayer } from '@/components/VideoPlayer'
 import { useHasMounted } from '@/hooks/useHasMounted'
+import { Carousel } from './Carousel'
 
 // Add this function to trigger confetti
 const triggerConfetti = () => {
@@ -239,12 +239,25 @@ export function LandingPage() {
       <section id="demo" className="py-20 relative z-10">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
+            {/* <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
               See it in Action
-            </h2>
-            <VideoPlayer
-              thumbnailUrl="/demo-placeholder.png"
-              videoUrl="https://www.youtube.com/watch?v=5af3UdzJQzI"
+            </h2> */}
+            <Carousel
+              images={[
+                {
+                  src: '/demo-placeholder.png',
+                  alt: 'Dashboard Overview'
+                },
+                {
+                  src: '/demo-placeholder.png',
+                  alt: 'Canvas Editor'
+                },
+                {
+                  src: '/demo-placeholder.png',
+                  alt: 'AI Generation'
+                },
+                // Add more screenshots as needed
+              ]}
             />
           </div>
         </div>
@@ -381,9 +394,7 @@ export function LandingPage() {
             <div>
               <h3 className="text-lg font-semibold mb-4">Connect</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href={AppConfig.landingPage.socials.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">Twitter</a></li>
-                <li><a href={AppConfig.landingPage.socials.discord} target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">Discord</a></li>
-                <li><a href={AppConfig.landingPage.socials.github} target="_blank" rel="noopener noreferrer" className="hover:text-teal-500 transition-colors">GitHub</a></li>
+                <li><a href={`mailto:${AppConfig.contactEmail}`} className="hover:text-teal-500 transition-colors">Email Us</a></li>
               </ul>
             </div>
           </div>

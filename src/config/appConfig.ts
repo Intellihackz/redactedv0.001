@@ -1,8 +1,9 @@
 export const AppConfig = {
   // App details
-  appName: 'NexusArt',
-  appDescription: 'Create, mint, and trade digital art on the NEAR blockchain with zero gas fees',
+  appName: 'Nexus',
+  appDescription: 'Create, mint, and trade digital art on the NEAR blockchain',
   appVersion: '1.0.0',
+  contactEmail: 'studionexus@duck.com',
   
   // Canvas defaults
   canvas: {
@@ -185,7 +186,34 @@ export const AppConfig = {
       discord: 'https://discord.gg/nexus',
       github: 'https://github.com/nexus-art'
     }
-  }
+  },
+
+  team: [
+    {
+      name: 'Zephyr',
+      role: 'Founder & Lead Developer',
+      twitter: 'https://twitter.com/zephyrdev_',
+      avatar: '/team/zephyr.jpg' // Add placeholder avatar image
+    },
+    {
+      name: 'BigYemy',
+      role: 'Project Manager',
+      twitter: 'https://twitter.com/bigyemy',
+      avatar: '/team/bigyemy.jpg'
+    },
+    {
+      name: 'Leye',
+      role: 'Business Lead',
+      twitter: 'https://twitter.com/_LeyeG',
+      avatar: '/team/leye.jpg'
+    },
+    {
+      name: 'AJ Instaraj',
+      role: 'Full Stack Developer',
+      twitter: 'https://twitter.com/ajinstaraj',
+      avatar: '/team/aj.jpg'
+    }
+  ],
 };
 
 export default AppConfig;

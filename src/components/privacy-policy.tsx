@@ -58,42 +58,155 @@ export function PrivacyPolicy() {
           <div className="space-y-8 text-gray-300">
             <section>
               <h2 className="text-2xl font-semibold mb-4 text-white">1. Information We Collect</h2>
-              <p>We collect information that you provide directly to us, including:</p>
-              <ul className="list-disc pl-6 mt-2 space-y-2">
-                <li>Account information (e.g., NEAR wallet address)</li>
-                <li>User-generated content (e.g., artwork, NFTs)</li>
-                <li>Communication preferences</li>
-              </ul>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-white">1.1 Information You Provide</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Account information (email, username, profile details)</li>
+                    <li>Blockchain wallet addresses</li>
+                    <li>Digital artwork and NFT metadata</li>
+                    <li>Communications with our support team</li>
+                    <li>Survey responses and feedback</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-white">1.2 Automatically Collected Information</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Device information (browser type, IP address)</li>
+                    <li>Usage data (features accessed, time spent)</li>
+                    <li>Transaction data on public blockchains</li>
+                    <li>Performance and error data</li>
+                    <li>Cookies and similar technologies</li>
+                  </ul>
+                </div>
+              </div>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-4 text-white">2. How We Use Your Information</h2>
-              <p>We use the collected information to:</p>
-              <ul className="list-disc pl-6 mt-2 space-y-2">
-                <li>Provide and maintain our services</li>
-                <li>Process your NFT transactions</li>
-                <li>Send you updates and notifications</li>
-                <li>Improve our platform</li>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-white">2.1 Core Service Provision</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Facilitating NFT creation and transactions</li>
+                    <li>Managing your account and preferences</li>
+                    <li>Processing payments and withdrawals</li>
+                    <li>Providing customer support</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-white">2.2 Platform Improvement</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Analyzing usage patterns and trends</li>
+                    <li>Debugging and optimizing performance</li>
+                    <li>Developing new features</li>
+                    <li>Personalizing user experience</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-white">2.3 Communications</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Service updates and announcements</li>
+                    <li>Security alerts and notifications</li>
+                    <li>Marketing communications (with consent)</li>
+                    <li>Community engagement</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 text-white">3. Blockchain Data</h2>
+              <p className="mb-4">
+                Please be aware that blockchain networks are public, and certain information will be 
+                visible to anyone, including:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Wallet addresses and transaction history</li>
+                <li>NFT ownership and transfer records</li>
+                <li>Smart contract interactions</li>
+                <li>Token metadata and properties</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4 text-white">3. Data Security</h2>
+              <h2 className="text-2xl font-semibold mb-4 text-white">4. Data Sharing and Disclosure</h2>
+              <p className="mb-4">We may share your information with:</p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Other users (public profile information)</li>
+                <li>Analytics and security services</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 text-white">5. Data Security</h2>
+              <p className="mb-4">We implement industry-standard security measures:</p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Encryption of sensitive data</li>
+                <li>Regular security audits</li>
+                <li>Access controls and monitoring</li>
+                <li>Secure data storage and transmission</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 text-white">6. Your Rights and Choices</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-white">6.1 Access and Control</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Access your personal information</li>
+                    <li>Update or correct your data</li>
+                    <li>Request data deletion (where possible)</li>
+                    <li>Export your data</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-white">6.2 Communication Preferences</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Opt-out of marketing emails</li>
+                    <li>Manage notification settings</li>
+                    <li>Control cookie preferences</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 text-white">7. Children's Privacy</h2>
               <p>
-                We implement appropriate security measures to protect your personal information. 
-                However, please note that no method of transmission over the internet is 100% secure.
+                Our services are not intended for users under 18. We do not knowingly collect 
+                information from children. If you believe we have collected information from a 
+                child, please contact us immediately.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4 text-white">4. Your Rights</h2>
-              <p>You have the right to:</p>
-              <ul className="list-disc pl-6 mt-2 space-y-2">
-                <li>Access your personal information</li>
-                <li>Correct inaccurate data</li>
-                <li>Request deletion of your data</li>
-                <li>Opt-out of marketing communications</li>
-              </ul>
+              <h2 className="text-2xl font-semibold mb-4 text-white">8. International Data Transfers</h2>
+              <p>
+                Your information may be transferred to and processed in countries other than your own. 
+                We ensure appropriate safeguards are in place for such transfers.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 text-white">9. Changes to This Policy</h2>
+              <p>
+                We may update this policy periodically. We will notify you of significant changes 
+                through our platform or via email.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 text-white">10. Contact Us</h2>
+              <p>
+                If you have questions about this privacy policy or your data, please contact our 
+                privacy team at privacy@{AppConfig.appName.toLowerCase()}.com
+              </p>
             </section>
           </div>
         </motion.div>
