@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Brush, Square, Circle, ChevronUp, ChevronDown, MousePointer2, Eye, EyeOff, Trash2, Layers, Settings, Eraser, ZoomIn, ZoomOut, Maximize, Copy, Clipboard, X, Download, Upload, Save, FolderOpen, Type, PenTool, Pencil, Edit3, Hexagon, Triangle, Octagon, Disc, Aperture, Image as ImageIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
-import { wallet } from '@/utils/near-wallet';
+import { useWalletSelector } from '@/contexts/WalletSelectorContext';
 import Modal from '@/components/Modal';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,6 @@ import { saveAs } from 'file-saver';
 import { Input } from "@/components/ui/input";
 import ExportModal from './ExportModal';
 import SaveModal from './SaveModal';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { AppConfig } from '@/config/appConfig';
 
 interface Shape {
@@ -69,7 +68,6 @@ const InfiniteCanvas2: React.FC = () => {
     const [moveStartX, setMoveStartX] = useState(0);
     const [moveStartY, setMoveStartY] = useState(0);
     const [isSignedIn, setIsSignedIn] = useState(false);
-    const [accountId, setAccountId] = useState('');
     const [isSelecting, setIsSelecting] = useState(false);
     const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
     const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
@@ -98,6 +96,7 @@ const InfiniteCanvas2: React.FC = () => {
     const [textInputPosition, setTextInputPosition] = useState<{ x: number; y: number } | null>(null);
     const [isEditingLayerName, setIsEditingLayerName] = useState<string | null>(null);
 
+    const { selector, modal, accountId: walletAccountId } = useWalletSelector();
 
     const handleToolSelect = useCallback((toolId: string, subToolId?: string) => {
         console.log("Selected tool:", toolId, "Sub-tool:", subToolId);
@@ -117,19 +116,12 @@ const InfiniteCanvas2: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const initWallet = async () => {
-            if (wallet) {
-                const signedIn = await wallet.startUp();
-                setIsSignedIn(signedIn);
-                if (signedIn) {
-                    setAccountId(wallet.getAccountId());
-                    showModal(`Welcome back, ${wallet.getAccountId()}!`);
-                }
-            }
+        const checkSignIn = async () => {
+            const signedIn = await selector.isSignedIn();
+            setIsSignedIn(signedIn);
         };
-
-        initWallet();
-    }, []);
+        checkSignIn();
+    }, [selector]);
 
     // Add these new functions
     const saveCanvasState = useCallback(
@@ -697,21 +689,12 @@ const InfiniteCanvas2: React.FC = () => {
     }, [shapes, selectedShapes, selectedShape, panOffset, zoom, isDarkMode]);
 
     const handleSignIn = () => {
-        console.log("Signing in");
-        wallet?.signIn();
+        modal.show();
     };
 
-    const handleSignOut = () => {
-        if (wallet) {
-            wallet.signOut().then(() => {
-                setIsSignedIn(false);
-                setAccountId('');
-                showModal("You have been signed out successfully.");
-            }).catch((error: Error) => {
-                console.error("Sign out failed:", error);
-                showModal("Sign out failed. Please try again.");
-            });
-        }
+    const handleSignOut = async () => {
+        const wallet = await selector.wallet();
+        await wallet.signOut();
     };
 
     const isShapeInSelection = (shape: Shape): boolean => {
@@ -912,31 +895,37 @@ const InfiniteCanvas2: React.FC = () => {
         showModal("Minting your NFT...");
 
         try {
-            // Convert selected shapes to image
             const imageDataUrl = await convertSelectionToImage();
-
-            // Generate a unique token ID
             const tokenId = `nft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-            // Prepare metadata
             const metadata = {
                 title: title,
                 description: description,
                 media: imageDataUrl,
             };
 
-            // Call the mintNFT method from the wallet
-            const result = await wallet?.callMethod({
-                method: 'nft_mint',
-                args: {
-                    token_id: tokenId,
-                    metadata: metadata,
-                    receiver_id: wallet?.getAccountId(),
-                },
-                deposit: AppConfig.nft.mintDeposit,
+            const currentWallet = await selector.wallet();
+            const result = await currentWallet.signAndSendTransaction({
+                receiverId: "your-contract.testnet", // Replace with your contract ID
+                actions: [{
+                    type: 'FunctionCall',
+                    params: {
+                        methodName: 'nft_mint',
+                        args: {
+                            token_id: tokenId,
+                            metadata: metadata,
+                            receiver_id: walletAccountId,
+                        },
+                        gas: '300000000000000',
+                        deposit: AppConfig.nft.mintDeposit,
+                    }
+                }]
             });
 
-            router.push(`/?transactionHashes=${result.transaction.hash}`);
+            if (result && 'transaction' in result) {
+                router.push(`/?transactionHashes=${result.transaction.hash}`);
+            } else {
+                showModal("Transaction result is not valid.");
+            }
         } catch (error: unknown) {
             console.error('Error minting NFT:', error);
             if (error instanceof Error) {
@@ -1135,27 +1124,7 @@ const InfiniteCanvas2: React.FC = () => {
         setIsEditingLayerName(null);
     };
 
-    const onDragEnd = (result: any) => {
-        if (!result.destination) {
-            return;
-        }
-
-        const items = Array.from(shapes);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-
-        // Reverse the order of items because we display layers from top to bottom
-        const reversedItems = items.reverse();
-
-        // Update zIndex for all shapes
-        const updatedShapes = reversedItems.map((shape, index) => ({
-            ...shape,
-            zIndex: index
-        }));
-
-        setShapes(updatedShapes);
-    };
-    // Add this function near the other rendering functions
+    // Add this function before renderLayers
     const renderPropertiesPanel = () => {
         if (selectedShape) {
             switch (selectedShape.tool) {
@@ -1215,26 +1184,6 @@ const InfiniteCanvas2: React.FC = () => {
                                     max="20"
                                     value={selectedShape.strokeWidth}
                                     onChange={(e) => handleSelectedShapePropertyChange('strokeWidth', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Width</label>
-                                <input
-                                    type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    value={selectedShape.width}
-                                    onChange={(e) => handleSelectedShapePropertyChange('width', parseInt(e.target.value))}
-                                />
-                            </div>
-                            <div className="mb-2">
-                                <label className="text-sm font-medium">Height</label>
-                                <input
-                                    type="number"
-                                    className="block mt-1 w-full text-black border border-gray-300 rounded-md p-2"
-                                    min="1"
-                                    value={selectedShape.height}
-                                    onChange={(e) => handleSelectedShapePropertyChange('height', parseInt(e.target.value))}
                                 />
                             </div>
                             <div className="mb-2">
@@ -1320,104 +1269,80 @@ const InfiniteCanvas2: React.FC = () => {
             );
         }
     };
+
     const renderLayers = () => (
-        <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="layers">
-                {(provided) => (
-                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                        <div className="flex justify-end mb-2">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleCopy}
-                                disabled={selectedShapes.length === 0}
-                                title={`Copy selected shapes (${AppConfig.hotkeys.actions.copy})`}
-                            >
-                                <Copy className="w-4 h-4 mr-1" />
-                                Copy
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handlePaste}
-                                disabled={copiedShapes.length === 0}
-                                title={`Paste copied shapes (${AppConfig.hotkeys.actions.paste})`}
-                            >
-                                <Clipboard className="w-4 h-4 mr-1" />
-                                Paste
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleSelectAll}
-                                title={`Select All (${AppConfig.hotkeys.actions.selectAll})`}
-                            >
-                                <MousePointer2 className="w-4 h-4 mr-1" />
-                                Select All
-                            </Button>
-                        </div>
-                        {shapes.map((shape, index) => (
-                            <Draggable key={shape.id} draggableId={shape.id} index={index}>
-                                {(provided) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        className={`flex items-center justify-between p-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded ${shape.isSelected ? 'border-2 border-blue-500' : ''}`}
-                                        onClick={(e) => handleShapeSelect(shape.id, e.ctrlKey || e.metaKey)}
-                                    >
-                                        {isEditingLayerName === shape.id ? (
-                                            <Input
-                                                className='w-full text-black dark:text-white bg-transparent outline-none border-0 ring-0 focus:ring-0 focus:ring-offset-0 shadow-none focus:border-0 p-0'
-                                                type="text"
-                                                defaultValue={shape.name || `Layer ${shapes.length - index}: ${shape.tool}`}
-                                                onBlur={(e) => handleLayerNameChange(shape.id, e.target.value)}
-                                                onKeyPress={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        handleLayerNameChange(shape.id, e.currentTarget.value);
-                                                    }
-                                                }}
-                                                autoFocus
-                                            />
-                                        ) : (
-                                            <span
-                                                className="text-sm truncate flex-grow cursor-pointer"
-                                                onDoubleClick={() => setIsEditingLayerName(shape.id)}
-                                            >
-                                                {shape.name || `Layer ${shapes.length - index}: ${shape.tool}`}
-                                            </span>
-                                        )}
-                                        <div className="flex space-x-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleShapeVisibilityToggle(shape.id);
-                                                }}
-                                            >
-                                                {shape.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleShapeDelete(shape.id);
-                                                }}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
+        <div className="space-y-2">
+            <div className="flex justify-end mb-2">
+                <Button
+                    variant="ghost"
+                    className="w-full flex items-center justify-between p-4"
+                    onClick={() => setIsLayersOpen(!isLayersOpen)}
+                >
+                    <span className="flex items-center">
+                        <Layers className="w-4 h-4 mr-2" />
+                        Layers
+                    </span>
+                    {isLayersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+            </div>
+            {isLayersOpen && (
+                <div className="space-y-2">
+                    {shapes.map((shape, index) => (
+                        <div
+                            key={shape.id}
+                            className={`flex items-center p-2 cursor-pointer ${
+                                selectedShapes.some(s => s.id === shape.id) ? 'bg-gray-700' : 'hover:bg-gray-600'
+                            }`}
+                            onClick={() => handleShapeSelect(shape.id)}
+                        >
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleShapeVisibilityToggle(shape.id);
+                                    }}
+                                    className="w-4 h-4"
+                                >
+                                    {shape.isVisible ? (
+                                        <Eye className="w-4 h-4" />
+                                    ) : (
+                                        <EyeOff className="w-4 h-4" />
+                                    )}
+                                </button>
+                                {isEditingLayerName === shape.id ? (
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        defaultValue={shape.name || `Layer ${shapes.length - index}`}
+                                        onBlur={(e) => handleLayerNameChange(shape.id, e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleLayerNameChange(shape.id, e.currentTarget.value);
+                                            }
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="bg-gray-700 text-white px-2 rounded"
+                                    />
+                                ) : (
+                                    <span onDoubleClick={() => setIsEditingLayerName(shape.id)}>
+                                        {shape.name || `Layer ${shapes.length - index}`}
+                                    </span>
                                 )}
-                            </Draggable>
-                        ))}
-                        {provided.placeholder}
-                    </div>
-                )}
-            </Droppable>
-        </DragDropContext>
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShapeDelete(shape.id);
+                                }}
+                                className="ml-auto"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 
     const MintForm: React.FC<{ onMint: (title: string, description: string) => void; onClose: () => void }> = ({ onMint, onClose }) => {
@@ -1686,7 +1611,7 @@ const InfiniteCanvas2: React.FC = () => {
             <div className="fixed top-4 right-4 z-50">
                 {isSignedIn ? (
                     <div className="flex items-center space-x-2 bg-gray-800 text-white px-3 py-2 rounded-lg shadow-lg">
-                        <span className="text-xs">{accountId}</span>
+                        <span className="text-xs">{walletAccountId}</span>
                         <Button size="sm" onClick={handleSignOut} className="bg-red-500 hover:bg-red-600 text-white text-xs">
                             Sign Out
                         </Button>
@@ -1729,22 +1654,7 @@ const InfiniteCanvas2: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                    <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-between p-4"
-                        onClick={() => setIsLayersOpen(!isLayersOpen)}
-                    >
-                        <span className="flex items-center">
-                            <Layers className="w-4 h-4 mr-2" />
-                            Layers
-                        </span>
-                        {isLayersOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </Button>
-                    {isLayersOpen && (
-                        <div className="p-4">
-                            {renderLayers()}
-                        </div>
-                    )}
+                    {renderLayers()}
                 </div>
             </div>
 
