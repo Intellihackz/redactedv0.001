@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Play, Pause, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import ReactPlayer from 'react-player'
-import { useHasMounted } from '@/hooks/useHasMounted'
+import { useHasMounted } from "@/hooks/useHasMounted"
 
 interface VideoPlayerProps {
   thumbnailUrl: string
