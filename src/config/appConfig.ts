@@ -208,9 +208,9 @@ export const AppConfig = {
       avatar: '/team/leye.jpg'
     },
     {
-      name: 'AJ Instaraj',
+      name: 'AI Instaraj',
       role: 'Full Stack Developer',
-      twitter: 'https://twitter.com/ajinstaraj',
+      twitter: 'https://twitter.com/AI_Instaraj',
       avatar: '/team/aj.jpg'
     }
   ],
