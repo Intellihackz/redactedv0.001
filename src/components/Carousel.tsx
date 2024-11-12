@@ -77,9 +77,10 @@ export function Carousel({ images }: CarouselProps) {
           <Image
             src={images[currentIndex].src}
             alt={images[currentIndex].alt}
-            fill
-            className="object-cover"
+            className="object-fit rounded-xl"
             priority
+            width={1000}
+            height={1000}
           />
         </motion.div>
       </AnimatePresence>

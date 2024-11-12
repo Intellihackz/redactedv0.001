@@ -123,8 +123,7 @@ export const AppConfig = {
   // Add this to the AppConfig object
   landingPage: {
     stats: {
-      betaSignups: '500+',
-      support: '24/7',
+      betaSignups: '20+',
       security: '100%',
       blockchain: 'NEAR'
     },

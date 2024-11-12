@@ -220,10 +220,6 @@ export function LandingPage() {
               <div className="text-gray-400 mt-2">Beta Signups</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-purple-500">{AppConfig.landingPage.stats.support}</div>
-              <div className="text-gray-400 mt-2">Support</div>
-            </div>
-            <div className="text-center">
               <div className="text-4xl font-bold text-teal-500">{AppConfig.landingPage.stats.security}</div>
               <div className="text-gray-400 mt-2">Secure</div>
             </div>
@@ -239,23 +235,20 @@ export function LandingPage() {
       <section id="demo" className="py-20 relative z-10">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            {/* <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
-              See it in Action
-            </h2> */}
+            <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
+              Sneak Peak
+            </h2>
             <Carousel
               images={[
                 {
-                  src: '/demo-placeholder.png',
+                  src: '/dark-demo.png',
                   alt: 'Dashboard Overview'
                 },
                 {
-                  src: '/demo-placeholder.png',
+                  src: '/light-demo.png',
                   alt: 'Canvas Editor'
                 },
-                {
-                  src: '/demo-placeholder.png',
-                  alt: 'AI Generation'
-                },
+               
                 // Add more screenshots as needed
               ]}
             />
