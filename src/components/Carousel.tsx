@@ -16,6 +16,7 @@ interface CarouselProps {
 
 export function Carousel({ images }: CarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [direction, setDirection] = useState(0)
 
   const slideVariants = {
     enter: (direction: number) => ({
@@ -42,16 +43,17 @@ export function Carousel({ images }: CarouselProps) {
   const paginate = (newDirection: number) => {
     const newIndex = currentIndex + newDirection
     if (newIndex >= 0 && newIndex < images.length) {
+      setDirection(newDirection)
       setCurrentIndex(newIndex)
     }
   }
 
   return (
-    <div className="relative w-full aspect-video rounded-xl overflow-hidden">
-      <AnimatePresence initial={false} custom={currentIndex}>
+    <div className="relative w-full h-[600px] rounded-xl overflow-hidden">
+      <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={currentIndex}
-          custom={currentIndex}
+          custom={direction}
           variants={slideVariants}
           initial="enter"
           animate="center"
@@ -74,43 +76,59 @@ export function Carousel({ images }: CarouselProps) {
           }}
           className="absolute w-full h-full"
         >
-          <Image
-            src={images[currentIndex].src}
-            alt={images[currentIndex].alt}
-            className="object-fit rounded-xl"
-            priority
-            width={1000}
-            height={1000}
-          />
+          <div className="relative w-full h-full">
+            <Image
+              src={images[currentIndex].src}
+              alt={images[currentIndex].alt}
+              className="object-contain"
+              priority
+              fill
+              quality={100}
+              sizes="100vw"
+              loading="eager"
+            />
+          </div>
         </motion.div>
       </AnimatePresence>
 
       {/* Navigation Buttons */}
-      <button
-        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-        onClick={() => paginate(-1)}
-        disabled={currentIndex === 0}
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
+      <div className="absolute inset-0 flex items-center justify-between p-4 pointer-events-none">
+        <button
+          className="pointer-events-auto z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            paginate(-1);
+          }}
+          disabled={currentIndex === 0}
+        >
+          <ChevronLeft className="w-6 h-6 text-white" />
+        </button>
 
-      <button
-        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-        onClick={() => paginate(1)}
-        disabled={currentIndex === images.length - 1}
-      >
-        <ChevronRight className="w-6 h-6" />
-      </button>
+        <button
+          className="pointer-events-auto z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            paginate(1);
+          }}
+          disabled={currentIndex === images.length - 1}
+        >
+          <ChevronRight className="w-6 h-6 text-white" />
+        </button>
+      </div>
 
       {/* Dots Navigation */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
         {images.map((_, index) => (
           <button
             key={index}
-            className={`w-2 h-2 rounded-full transition-colors ${
-              index === currentIndex ? 'bg-white' : 'bg-white/50'
+            className={`w-3 h-3 rounded-full transition-colors pointer-events-auto ${
+              index === currentIndex ? 'bg-white' : 'bg-white/50 hover:bg-white/75'
             }`}
-            onClick={() => setCurrentIndex(index)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDirection(index > currentIndex ? 1 : -1);
+              setCurrentIndex(index);
+            }}
           />
         ))}
       </div>

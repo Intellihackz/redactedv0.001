@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Infinity ,Play, CheckCircle2, Code2, Paintbrush, Laptop, Zap, Palette, Rocket, Bell } from 'lucide-react'
+import { ArrowRight, Infinity, Play, Paintbrush, Laptop, Zap, Palette, Rocket, Bell } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import emailjs from '@emailjs/browser'
@@ -117,9 +117,9 @@ export function LandingPage() {
       <header className="container mx-auto px-4 py-6 relative z-10">
         <nav className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <Image src="/logo.svg" alt={AppConfig.appName} width={50} height={50} priority />
+            <Image src="/logo.svg" alt="Nexus" width={50} height={50} priority />
             <span className="text-2xl font-bold bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
-              {AppConfig.appName}
+              Nexus
             </span>
           </div>
           <div className="hidden md:flex space-x-8">
@@ -131,7 +131,7 @@ export function LandingPage() {
         </nav>
       </header>
 
-      {/* Hero Section with Waitlist Form */}
+      {/* Updated Hero Section */}
       <section className="container mx-auto px-4 py-20 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -140,13 +140,13 @@ export function LandingPage() {
           className="max-w-4xl mx-auto text-center"
         >
           <span className="px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-purple-500/10 text-teal-500 text-sm font-medium mb-4 inline-block">
-            Coming Soon
+            Create • Mint • Trade
           </span>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
-            The Future of Digital Art Creation
+            Your All-in-One Digital Art Platform
           </h1>
           <p className="text-xl md:text-2xl mb-10 text-gray-300">
-            {AppConfig.appDescription}
+            Create, mint, and trade digital art NFTs seamlessly on NEAR blockchain. Professional tools, low fees, and instant settlement - all in one platform.
           </p>
 
           {/* Hero Waitlist Form */}
@@ -213,19 +213,23 @@ export function LandingPage() {
             </a>
           </div>
 
-          {/* Stats */}
+          {/* Updated Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20">
             <div className="text-center">
-              <div className="text-4xl font-bold text-teal-500">{AppConfig.landingPage.stats.betaSignups}</div>
-              <div className="text-gray-400 mt-2">Beta Signups</div>
+              <div className="text-4xl font-bold text-teal-500">Near</div>
+              <div className="text-gray-400 mt-2">Blockchain</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-teal-500">{AppConfig.landingPage.stats.security}</div>
-              <div className="text-gray-400 mt-2">Secure</div>
+              <div className="text-4xl font-bold text-teal-500">Instant</div>
+              <div className="text-gray-400 mt-2">Minting</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-purple-500">{AppConfig.landingPage.stats.blockchain}</div>
-              <div className="text-gray-400 mt-2">Powered</div>
+              <div className="text-4xl font-bold text-purple-500">Low</div>
+              <div className="text-gray-400 mt-2">Transaction Fees</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-purple-500">∞</div>
+              <div className="text-gray-400 mt-2">Canvas</div>
             </div>
           </div>
         </motion.div>
@@ -260,17 +264,24 @@ export function LandingPage() {
       <section id="features" className="py-20 relative z-10">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-20 bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
-            Why Choose {AppConfig.appName}
+            Why Choose Nexus
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {AppConfig.landingPage.features.map((feature, index) => (
-              <FeatureCard
-                key={index}
-                icon={getIconComponent(feature.icon)}
-                title={feature.title}
-                description={feature.description}
-              />
-            ))}
+            <FeatureCard
+              icon={<Paintbrush className="h-12 w-12 text-teal-500" />}
+              title="Professional Creation Tools"
+              description="Access professional-grade digital art tools with an infinite canvas workspace and built-in design features."
+            />
+            <FeatureCard
+              icon={<Zap className="h-12 w-12 text-teal-500" />}
+              title="Instant NFT Minting"
+              description="Convert your artwork to NFTs with one click. Seamless integration with NEAR blockchain for fast, low-cost minting."
+            />
+            <FeatureCard
+              icon={<Rocket className="h-12 w-12 text-teal-500" />}
+              title="Built-in Marketplace"
+              description="Trade your digital art NFTs with low fees, instant settlement, and secure ownership verification."
+            />
           </div>
         </div>
       </section>
@@ -282,15 +293,30 @@ export function LandingPage() {
             How it Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
-            {AppConfig.landingPage.steps.map((step, index) => (
-              <StepCard
-                key={index}
-                number={index + 1}
-                icon={getIconComponent(step.icon)}
-                title={step.title}
-                description={step.description}
-              />
-            ))}
+            <StepCard
+              number={1}
+              icon={<Palette className="h-12 w-12 text-teal-500" />}
+              title="Create"
+              description="Use our professional-grade tools to create your digital masterpiece on an infinite canvas."
+            />
+            <StepCard
+              number={2}
+              icon={<Laptop className="h-12 w-12 text-teal-500" />}
+              title="Mint"
+              description="Convert your artwork to an NFT with one click using NEAR blockchain."
+            />
+            <StepCard
+              number={3}
+              icon={<Rocket className="h-12 w-12 text-teal-500" />}
+              title="List"
+              description="Set your price and list your NFT on our integrated marketplace."
+            />
+            <StepCard
+              number={4}
+              icon={<Bell className="h-12 w-12 text-teal-500" />}
+              title="Sell"
+              description="Reach collectors globally with instant settlements and secure transactions."
+            />
           </div>
         </div>
       </section>
@@ -353,19 +379,19 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Updated Footer */}
       <footer className="py-12 relative z-10 border-t border-gray-900">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Image src="/logo.svg" alt={AppConfig.appName} width={40} height={40} />
+                <Image src="/logo.svg" alt="Nexus" width={40} height={40} />
                 <span className="text-2xl font-bold bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
-                  {AppConfig.appName}
+                  Nexus
                 </span>
               </div>
               <p className="text-gray-400">
-                The future of digital art creation and ownership.
+                Empowering artists with an end-to-end digital art creation and NFT trading platform.
               </p>
             </div>
             <div>
@@ -392,7 +418,7 @@ export function LandingPage() {
             </div>
           </div>
           <div className="text-center text-gray-400 text-sm">
-            <p>© {new Date().getFullYear()} {AppConfig.appName}. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Nexus. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -471,4 +497,3 @@ function BackgroundAnimation() {
     </div>
   )
 }
-

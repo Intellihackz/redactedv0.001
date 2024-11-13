@@ -171,7 +171,7 @@ export const AppConfig = {
 
     cta: {
       primary: {
-        text: 'Watch Demo',
+        text: 'Sneak Peek',
         href: '#demo'
       },
       secondary: {
